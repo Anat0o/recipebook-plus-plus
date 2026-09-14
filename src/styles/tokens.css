@@ -1,0 +1,176 @@
+/*
+ * Пиксельный шрифт контентного слоя.
+ * Оригинальный шрифт Minecraft проприетарный — берём открытый Monocraft (OFL),
+ * он покрывает и кириллицу. Скачивается tools/fetch-fonts.ts, не коммитится.
+ */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('/fonts/Monocraft.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+ * Дизайн-токены: палитра GUI Minecraft.
+ *
+ * Светлая тема — камень, тёмная — глубинный сланец. Панели строятся на трёх
+ * цветах: заливка, светлая грань (сверху-слева) и тёмная (снизу-справа) —
+ * именно так игра рисует каждую кнопку и каждый слот.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Поверхности */
+  --mc-page: #6b6b6b;
+  --mc-surface: #c6c6c6;
+  --mc-surface-light: #ffffff;
+  --mc-surface-dark: #555555;
+  --mc-surface-hover: #d4d4d4;
+  --mc-slot: #676767;
+  --mc-slot-shadow: #373737;
+  --mc-field: #000000;
+
+  /* Текст */
+  --mc-text-strong: #1f1f1f;
+  --mc-text: #3f3f3f;
+  --mc-text-dim: #4a4a4a;
+  --mc-text-faint: #535353;
+  --mc-text-on-dark: #f2f2f2;
+
+  /* Акценты игры: зелень травы и жёлтый заголовков GUI. */
+  --mc-accent: #1f5f0f;
+  --mc-accent-bright: #7fdb4a;
+  --mc-highlight: #7b4500;
+  --mc-danger: #b02e26;
+  --mc-fill: rgb(0 0 0 / 0.08);
+  --mc-fill-strong: rgb(0 0 0 / 0.16);
+  --mc-line: rgb(0 0 0 / 0.24);
+
+  /* Затемнение поверх фоновой плитки, как в меню игры. */
+  --mc-tile-veil: rgb(0 0 0 / 0.35);
+  --mc-tile-size: 64px;
+
+  /* Тултип предмета */
+  --mc-tooltip-bg: #100010;
+  --mc-tooltip-border: #2d0a63;
+  --mc-tooltip-text: #ffffff;
+
+  /* Типографика */
+  --font-ui: 'Monocraft', ui-monospace, 'SF Mono', monospace;
+  --font-mc: 'Monocraft', ui-monospace, 'SF Mono', monospace;
+
+  --text-caption2: 0.75rem;
+  --text-caption1: 0.8125rem;
+  --text-footnote: 0.875rem;
+  --text-subhead: 0.9375rem;
+  --text-body: 1rem;
+  --text-headline: 1.0625rem;
+  --text-title3: 1.25rem;
+  --text-title2: 1.375rem;
+  --text-title1: 1.75rem;
+  --text-large-title: 2rem;
+
+  /* Пиксельная сетка: скругления не используем, всё на прямых углах. */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-pill: 0;
+  /* Толщина граней панелей и слотов. */
+  --bevel: 3px;
+  --bevel-thin: 2px;
+
+  /* Зона нажатия остаётся 44 pt, как бы пиксельно ни выглядела кнопка. */
+  --tap-target: 44px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mc-page: #131315;
+    --mc-surface: #3e3e44;
+    --mc-surface-light: #6e6e78;
+    --mc-surface-dark: #1c1c20;
+    --mc-surface-hover: #4a4a52;
+    --mc-slot: #2a2a2f;
+    --mc-slot-shadow: #121214;
+
+    --mc-text-strong: #f6f6f6;
+    --mc-text: #dcdcdc;
+    --mc-text-dim: #c2c2c8;
+    --mc-text-faint: #a8a8b2;
+
+    --mc-accent: #6cbf4a;
+    --mc-accent-bright: #9bf06a;
+    --mc-highlight: #ffd34d;
+    --mc-danger: #ff6b60;
+    --mc-fill: rgb(255 255 255 / 0.08);
+    --mc-fill-strong: rgb(255 255 255 / 0.14);
+    --mc-line: rgb(255 255 255 / 0.16);
+
+    --mc-tile-veil: rgb(0 0 0 / 0.5);
+  }
+}
+
+/* «Понижение прозрачности» — убираем полупрозрачную вуаль поверх плитки. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --mc-tile-veil: var(--mc-page);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  /*
+   * Фон меню игры: тайл блока под затемняющей вуалью. Адрес плитки ставит
+   * приложение — текстура берётся из той версии, которую сейчас смотрят.
+   */
+  background-color: var(--mc-page);
+  background-image: linear-gradient(var(--mc-tile-veil), var(--mc-tile-veil)), var(--mc-tile, none);
+  background-size: auto, var(--mc-tile-size) var(--mc-tile-size);
+  background-repeat: repeat;
+  image-rendering: pixelated;
+  color: var(--mc-text-on-dark);
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  line-height: 1.4;
+  overscroll-behavior-y: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Надписи поверх фона — с тенью, как весь текст в GUI игры. */
+.mc-shadow {
+  text-shadow: 2px 2px 0 rgb(0 0 0 / 0.65);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

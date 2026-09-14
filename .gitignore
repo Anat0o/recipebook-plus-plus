@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.cache/
+# Сгенерированные данные и ассеты Mojang не коммитим — собираются в CI
+public/data/
+tools/.mcmeta-cache/
+tools/.client-cache/
+*.local
+.DS_Store
+test-results/
+playwright-report/
+logs/
+tools/.font-cache/
+public/fonts/
+*.tsbuildinfo

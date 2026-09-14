@@ -1,0 +1,65 @@
+name: Сборка и публикация
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Одновременно публикуем только одну сборку, но текущую не обрываем.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Данные Minecraft в репозитории не лежат — тянем их из misode/mcmeta.
+      - name: Кэш выгрузок mcmeta
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools/.mcmeta-cache
+            tools/.client-cache
+          key: minecraft-data-${{ hashFiles('tools/config.ts', 'tools/mc/official-client.ts') }}
+
+      - run: npm run fetch:fonts
+      - run: npm run build:data
+      - run: npm run check:coverage
+      - run: npm test
+
+      - name: Сборка сайта
+        run: npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

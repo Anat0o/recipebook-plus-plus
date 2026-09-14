@@ -1,0 +1,35 @@
+{
+  "name": "recipebook-plus-plus",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "fetch:data": "tsx tools/fetch-mcmeta.ts",
+    "fetch:fonts": "tsx tools/fetch-fonts.ts",
+    "build:data": "tsx tools/build-all.ts",
+    "check:coverage": "tsx tools/check-coverage.ts",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "sharp": "^0.34.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0",
+    "vitest": "^3.2.0",
+    "wawoff2": "^2.0.1"
+  }
+}

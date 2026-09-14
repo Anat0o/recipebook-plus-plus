@@ -1,0 +1,1730 @@
+/* Компоновка экранов и элементы управления — всё в стиле GUI игры. */
+
+#root {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app {
+  touch-action: pan-y;
+  min-height: 100dvh;
+  padding-bottom: calc(var(--tap-target) + 54px + var(--safe-bottom));
+}
+
+.screen {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: calc(var(--safe-top) + 14px) 16px 24px;
+}
+
+.screen__title {
+  font-size: var(--text-large-title);
+  font-weight: 400;
+  color: var(--mc-text-on-dark);
+  text-shadow: 3px 3px 0 rgb(0 0 0 / 0.7);
+  margin: 8px 0 16px;
+}
+
+.screen__hint {
+  color: #d0d0d0;
+  font-size: var(--text-footnote);
+  text-shadow: 2px 2px 0 rgb(0 0 0 / 0.6);
+  margin: 0 0 16px;
+}
+
+/* ——— Таб-бар: ряд кнопок инвентаря ——— */
+
+.tab-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(10px + var(--safe-bottom));
+  transform: translateX(-50%);
+  /* Разделы остаются доступны поверх карточки: повторный тап возвращает в корень. */
+  z-index: 70;
+  display: flex;
+  gap: 2px;
+  padding: var(--bevel);
+  width: min(440px, calc(100% - 20px));
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s;
+}
+
+.tab-bar.is-minimized {
+  transform: translateX(-50%) translateY(calc(100% + 20px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tab-bar__item {
+  flex: 1;
+  min-height: var(--tap-target);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--mc-text);
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  transition: background 0.12s steps(2), color 0.12s steps(2);
+}
+
+.tab-bar__item:hover {
+  background: var(--mc-surface-hover);
+  color: var(--mc-highlight);
+}
+
+/* Выбранная вкладка вдавлена — так игра показывает нажатую кнопку. */
+.tab-bar__item.is-active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-surface-hover);
+  color: var(--mc-accent);
+}
+
+.tab-bar__item:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -1px;
+}
+
+.tab-bar__icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.tab-bar__label {
+  font-size: var(--text-caption2);
+}
+
+@media (max-width: 360px) {
+  .tab-bar { width: calc(100% - 8px); }
+  .tab-bar__label { font-size: 0.62rem; }
+  .tab-bar__icon svg { width: 19px; height: 19px; }
+}
+
+/* ——— Жители и торговля ——— */
+
+.villager-search input {
+  width: 100%;
+  min-height: var(--tap-target);
+  box-sizing: border-box;
+  padding: 8px 10px;
+  color: #fff;
+  background: var(--mc-field);
+  border: var(--bevel-thin) solid var(--mc-surface-dark);
+  font: inherit;
+}
+
+.villager-grid {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 7px;
+}
+
+.villager-card,
+.villager-workstation {
+  width: 100%;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  text-align: left;
+  color: var(--mc-text);
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.villager-card span:not(.slot),
+.villager-card strong,
+.villager-card small { display: block; }
+.villager-card small { margin-top: 3px; color: var(--mc-text-dim); font-size: var(--text-caption2); }
+
+.villager-variants { display: flex; flex-wrap: wrap; gap: 5px; }
+.villager-variants span { padding: 5px 7px; background: var(--mc-fill-strong); color: var(--mc-text); }
+
+.villager-trades { display: grid; gap: 7px; }
+.villager-trade {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--mc-surface);
+  border: var(--bevel-thin) solid var(--mc-line);
+}
+.villager-trade .recipe__meta { flex-basis: 100%; }
+.villager-trade > small { color: var(--mc-text-dim); }
+
+/* ——— Поле поиска ——— */
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  min-height: var(--tap-target);
+  background: var(--mc-field);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-slot-shadow) var(--mc-surface-light) var(--mc-surface-light) var(--mc-slot-shadow);
+}
+
+.search-field:focus-within {
+  border-color: var(--mc-accent-bright);
+}
+
+.search-field__icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--mc-text-faint);
+}
+
+.search-field__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  font: inherit;
+  color: #ffffff;
+  padding: 10px 0;
+  appearance: none;
+}
+
+.search-field__input::placeholder {
+  color: #6d6d6d;
+}
+
+.search-field__input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-field__clear {
+  width: 32px;
+  height: 32px;
+  color: #d0d0d0;
+  font-size: var(--text-caption1);
+}
+
+.search-field__clear:hover {
+  color: var(--mc-highlight);
+}
+
+/* ——— Списки ——— */
+
+.item-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: var(--bevel);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: 6px 10px;
+  text-align: left;
+  color: var(--mc-text);
+  background: var(--mc-fill);
+  transition: background 0.12s steps(2), color 0.12s steps(2);
+}
+
+.item-row:hover {
+  background: var(--mc-fill-strong);
+  color: var(--mc-highlight);
+}
+
+.item-row:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -2px;
+}
+
+.item-row__name {
+  font-size: var(--text-subhead);
+}
+
+.item-row__id {
+  display: block;
+  font-size: var(--text-caption2);
+  color: var(--mc-text-faint);
+}
+
+.item-grid {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 6px;
+}
+
+.item-tile {
+  width: 100%;
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 6px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  font-size: var(--text-caption2);
+  color: var(--mc-text);
+  text-align: center;
+  transition: background 0.12s steps(2), color 0.12s steps(2);
+}
+
+.item-tile:hover {
+  background: var(--mc-surface-hover);
+  color: var(--mc-highlight);
+}
+
+.item-tile:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -1px;
+}
+
+/* ——— Шит ——— */
+
+.sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.55);
+  border: none;
+  width: 100%;
+  cursor: default;
+  animation: fade-in 0.2s ease;
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel) var(--bevel) 0;
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  animation: sheet-in 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.sheet.is-settling {
+  transition: height 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.sheet__grabber-area {
+  padding: 8px 0 4px;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  cursor: grab;
+  flex: none;
+  min-height: 28px;
+}
+
+.sheet__grabber {
+  width: 40px;
+  height: 6px;
+  background: var(--mc-slot);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--mc-slot-shadow) var(--mc-surface-light) var(--mc-surface-light) var(--mc-slot-shadow);
+}
+
+.sheet__bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px 6px;
+  flex: none;
+}
+
+.sheet__close {
+  min-height: 32px;
+  padding: 4px 12px;
+  background: var(--mc-surface);
+  color: var(--mc-text);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  font-size: var(--text-footnote);
+  position: relative;
+}
+
+.sheet__close:hover {
+  background: var(--mc-surface-hover);
+  color: var(--mc-highlight);
+}
+
+/* Зона нажатия добирается до 44 pt, не раздувая саму кнопку. */
+.sheet__close::before {
+  content: '';
+  position: absolute;
+  inset: -8px -10px;
+}
+
+.sheet__content {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 14px calc(var(--tap-target) + 72px + var(--safe-bottom));
+  -webkit-overflow-scrolling: touch;
+  color: var(--mc-text);
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ——— Сегменты ——— */
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(var(--segments), 1fr);
+  gap: 2px;
+  margin: 12px 0;
+}
+
+/* Индикатор не нужен: выбранный сегмент вдавливается, как кнопка в игре. */
+.segmented__indicator {
+  display: none;
+}
+
+.segmented__item {
+  min-height: var(--tap-target);
+  font-size: var(--text-footnote);
+  color: var(--mc-text);
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  transition: background 0.12s steps(2), color 0.12s steps(2);
+}
+
+.segmented__item:hover {
+  background: var(--mc-surface-hover);
+  color: var(--mc-highlight);
+}
+
+.segmented__item.is-selected {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-surface-hover);
+  color: var(--mc-accent);
+}
+
+.segmented__item:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -1px;
+}
+
+/* ——— Переключатель и слайдер ——— */
+
+.toggle-row,
+.slider-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--tap-target);
+  padding: 4px 0;
+}
+
+.slider-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.toggle-row__label,
+.slider-row__label {
+  font-size: var(--text-footnote);
+  color: var(--mc-text);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.slider-row__value {
+  color: var(--mc-accent);
+}
+
+/* Переключатель — вдавленная дорожка с ручкой-кнопкой. */
+.toggle {
+  width: 54px;
+  height: 28px;
+  flex: none;
+  padding: 2px;
+  position: relative;
+  background: var(--mc-slot);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-slot-shadow) var(--mc-surface-light) var(--mc-surface-light) var(--mc-slot-shadow);
+}
+
+.toggle::before {
+  content: '';
+  position: absolute;
+  inset: -8px -4px;
+}
+
+.toggle.is-on {
+  background: var(--mc-accent);
+}
+
+.toggle__knob {
+  display: block;
+  width: 24px;
+  height: 20px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  transition: transform 0.16s steps(4);
+}
+
+.toggle.is-on .toggle__knob {
+  transform: translateX(22px);
+}
+
+.toggle:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: 2px;
+}
+
+/* Слайдер: дорожка как у полосы прокрутки GUI, ручка — кнопка. */
+.slider {
+  width: 100%;
+  height: var(--tap-target);
+  appearance: none;
+  background: none;
+}
+
+.slider::-webkit-slider-runnable-track {
+  height: 12px;
+  background: var(--mc-slot);
+  border: var(--bevel-thin) solid var(--mc-slot-shadow);
+}
+
+.slider::-moz-range-track {
+  height: 12px;
+  background: var(--mc-slot);
+  border: var(--bevel-thin) solid var(--mc-slot-shadow);
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 26px;
+  margin-top: -9px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.slider::-moz-range-thumb {
+  width: 16px;
+  height: 26px;
+  border-radius: 0;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.slider:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -8px;
+}
+
+/* ——— Карточка предмета ——— */
+
+.item-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0 8px;
+}
+
+.item-head__name {
+  font-size: var(--text-title3);
+  font-weight: 400;
+  color: var(--mc-text-strong);
+  margin: 0;
+}
+
+.item-head__id {
+  font-size: var(--text-caption2);
+  color: var(--mc-text-faint);
+}
+
+.section {
+  margin: 18px 0 0;
+}
+
+.section__title {
+  font-size: var(--text-footnote);
+  color: var(--mc-highlight);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+}
+
+.section__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Рецепт — панель GUI. */
+.recipe {
+  font-family: var(--font-mc);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  padding: 10px;
+  color: var(--mc-text);
+  /* Ступенчатое появление: карточки «выкладываются» одна за другой. */
+  animation: recipe-in 0.28s steps(4) backwards;
+}
+
+.section__body > *:nth-child(1) { animation-delay: 0ms; }
+.section__body > *:nth-child(2) { animation-delay: 40ms; }
+.section__body > *:nth-child(3) { animation-delay: 80ms; }
+.section__body > *:nth-child(4) { animation-delay: 120ms; }
+.section__body > *:nth-child(n + 5) { animation-delay: 160ms; }
+
+@keyframes recipe-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.recipe--blocked {
+  opacity: 0.45;
+}
+
+.recipe__furnace,
+.recipe__cost {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recipe__cost {
+  flex-direction: row;
+}
+
+.recipe__meta {
+  display: flex;
+  gap: 16px;
+  margin: 0 0 0 auto;
+  font-size: var(--text-caption1);
+}
+
+.recipe__meta div {
+  text-align: right;
+}
+
+.recipe__meta dt {
+  color: var(--mc-text-dim);
+  font-size: var(--text-caption2);
+}
+
+.recipe__meta dd {
+  margin: 0;
+  font-size: var(--text-subhead);
+}
+
+.recipe__meta div.is-current {
+  background: var(--mc-fill-strong);
+  margin: -2px -4px;
+  padding: 2px 4px;
+}
+
+.recipe__average {
+  margin: 0;
+  font-size: var(--text-caption2);
+  color: var(--mc-text-dim);
+}
+
+.recipe__chance {
+  color: var(--mc-text-strong);
+}
+
+.recipe__origin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 46%;
+}
+
+.recipe__origin-name {
+  font-size: var(--text-footnote);
+  line-height: 1.25;
+}
+
+.recipe__origin-mark {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  background: var(--mc-slot);
+  border: var(--bevel-thin) solid var(--mc-slot-shadow);
+}
+
+.recipe__conditions {
+  flex-basis: 100%;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.recipe__conditions li {
+  font-size: var(--text-caption2);
+  background: var(--mc-fill-strong);
+  padding: 3px 8px;
+}
+
+.recipe__note {
+  font-size: var(--text-footnote);
+  max-width: 60%;
+}
+
+.recipe__values {
+  font-size: var(--text-caption1);
+  line-height: 1.4;
+}
+
+.mc-ingredient {
+  position: relative;
+  display: inline-block;
+}
+
+.mc-ingredient__count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: var(--mc-accent);
+  color: #fff;
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.mc-sprite--missing {
+  background: repeating-conic-gradient(#c400c4 0 25%, #000 0 50%) 0 0 / 50% 50%;
+}
+
+.notice {
+  font-size: var(--text-footnote);
+  color: var(--mc-text);
+  background: var(--mc-fill);
+  border-left: var(--bevel) solid var(--mc-highlight);
+  padding: 10px 12px;
+}
+
+.footer {
+  max-width: 720px;
+  margin: 28px auto 0;
+  padding: 0 16px;
+  font-size: var(--text-caption2);
+  color: #b6b6b6;
+  text-shadow: 2px 2px 0 rgb(0 0 0 / 0.6);
+  text-align: center;
+}
+
+.settings-group {
+  padding: var(--bevel);
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.settings-group__title {
+  font-size: var(--text-footnote);
+  color: #d6d6d6;
+  text-shadow: 2px 2px 0 rgb(0 0 0 / 0.6);
+  margin: 14px 0 6px 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ——— Станции ——— */
+
+.recipe--enchantment {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.enchantment__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.enchantment__name {
+  font-size: var(--text-subhead);
+  color: var(--mc-text-strong);
+}
+
+.enchantment__badge {
+  font-size: var(--text-caption2);
+  background: var(--mc-fill-strong);
+  padding: 2px 6px;
+}
+
+.enchantment__meta {
+  margin: 0;
+  justify-content: flex-start;
+}
+
+.enchantment__meta div {
+  text-align: left;
+}
+
+.enchantment__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+
+.enchantment__more,
+.enchantment__conflicts {
+  font-size: var(--text-caption1);
+  color: var(--mc-text-dim);
+  margin: 0;
+}
+
+.recipe--brew {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.brew-item {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 92px;
+  flex: none;
+  text-align: center;
+}
+
+.brew-item figcaption {
+  font-size: var(--text-caption2);
+  line-height: 1.2;
+}
+
+/* ——— Баннеры ——— */
+
+.banner {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  image-rendering: pixelated;
+}
+
+.banner__layer {
+  position: absolute;
+  inset: 0;
+  image-rendering: pixelated;
+}
+
+/* Послойная сборка: слои проявляются в том же порядке, в каком их кладёт станок. */
+.banner--animate .banner__layer {
+  animation: banner-layer 420ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
+}
+
+@keyframes banner-layer {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.banner-gallery {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 6px;
+}
+
+.banner-card {
+  width: 100%;
+  min-height: var(--tap-target);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  font-family: var(--font-mc);
+  font-size: var(--text-caption2);
+  text-align: center;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  color: var(--mc-text);
+  transition: background 0.12s steps(2);
+}
+
+.banner-card:hover {
+  background: var(--mc-surface-hover);
+}
+
+.banner-card.is-open {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-surface-hover);
+}
+
+.banner-card:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -1px;
+}
+
+.banner-card__name {
+  line-height: 1.2;
+}
+
+.banner-card__layers {
+  color: var(--mc-text-dim);
+}
+
+.armor-gallery {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 6px;
+}
+
+.armor-gallery--variants {
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+}
+
+.armor-card {
+  width: 100%;
+  min-height: 154px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 6px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  color: var(--mc-text);
+  font-family: var(--font-mc);
+  text-align: center;
+}
+
+.armor-card:hover,
+.armor-card:focus-visible {
+  background: var(--mc-surface-hover);
+}
+
+.armor-card:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -1px;
+}
+
+.armor-card__name {
+  min-height: 2.4em;
+  font-size: var(--text-caption2);
+  line-height: 1.2;
+}
+
+.armor-set {
+  display: inline-block;
+  flex: none;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
+.armor-set--missing {
+  background: repeating-conic-gradient(var(--mc-surface-dark) 0 25%, var(--mc-surface) 0 50%) 0 / 8px 8px;
+}
+
+.trim-materials {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 4px;
+}
+
+.trim-material {
+  min-height: var(--tap-target);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: var(--mc-surface);
+  color: var(--mc-text);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  font-family: var(--font-mc);
+  font-size: var(--text-caption2);
+  text-align: left;
+}
+
+.trim-material.is-selected {
+  background: var(--mc-surface-hover);
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+}
+
+.trim-material:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -1px;
+}
+
+.recipe--loom {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.pattern-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pattern-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  color: var(--mc-text);
+  font-family: var(--font-mc);
+}
+
+.pattern-row__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pattern-row__name {
+  display: block;
+  font-size: var(--text-footnote);
+}
+
+.pattern-row__id {
+  display: block;
+  font-size: var(--text-caption2);
+  color: var(--mc-text-faint);
+}
+
+.pattern-row__item {
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  display: grid;
+  place-items: center;
+}
+
+.pattern-row__free {
+  font-size: var(--text-caption2);
+  color: var(--mc-text-dim);
+}
+
+/* ——— Анимации ——— */
+
+/*
+ * Живое пламя печи. Текстура огня в игре — вертикальная лента из 32 кадров,
+ * поэтому анимация делается одним steps() без JavaScript и без лишних файлов.
+ */
+.furnace-flame {
+  width: 28px;
+  height: 28px;
+  align-self: center;
+  background-image: var(--mc-flame, none);
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  animation: flame-frames 1.6s steps(var(--mc-flame-frames, 32)) infinite;
+}
+
+@keyframes flame-frames {
+  to {
+    /* Прокручиваем ленту ровно на её высоту: кадры сменяют друг друга. */
+    background-position-y: calc(28px * var(--mc-flame-frames, 32) * -1);
+  }
+}
+
+/* Заливка стрелки — ход плавки. */
+.mc-arrow__fill {
+  animation: arrow-progress 2.4s steps(12) infinite;
+}
+
+@keyframes arrow-progress {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Пузырьки варочной стойки. */
+.bubbles {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 26px;
+  margin-left: auto;
+}
+
+.bubbles span {
+  width: 5px;
+  height: 5px;
+  background: var(--mc-accent-bright);
+  animation: bubble-rise 1.8s steps(6) infinite;
+}
+
+.bubbles span:nth-child(2) { animation-delay: 0.35s; }
+.bubbles span:nth-child(3) { animation-delay: 0.7s; }
+.bubbles span:nth-child(4) { animation-delay: 1.05s; }
+
+@keyframes bubble-rise {
+  from {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-22px);
+    opacity: 0;
+  }
+}
+
+/*
+ * Руны стола зачарований. Настоящий «стандартный галактический алфавит» —
+ * это шрифт из ассетов игры, которого в атласе mcmeta нет, поэтому здесь
+ * нарисованные фигуры: они передают настроение, но не выдают себя за шрифт игры.
+ */
+.runes {
+  position: relative;
+  height: 34px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.runes svg {
+  position: absolute;
+  top: 6px;
+  width: 16px;
+  height: 22px;
+  color: var(--mc-accent-bright);
+  opacity: 0;
+  animation: rune-float 6s linear infinite;
+}
+
+.runes svg:nth-child(1) { left: 4%; animation-delay: 0s; }
+.runes svg:nth-child(2) { left: 22%; animation-delay: 0.9s; }
+.runes svg:nth-child(3) { left: 40%; animation-delay: 1.8s; }
+.runes svg:nth-child(4) { left: 58%; animation-delay: 2.7s; }
+.runes svg:nth-child(5) { left: 76%; animation-delay: 3.6s; }
+.runes svg:nth-child(6) { left: 90%; animation-delay: 4.5s; }
+
+@keyframes rune-float {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  20%,
+  60% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+/* Иконка в шапке карточки слегка покачивается — предмет «живой». */
+.item-head .mc-sprite {
+  animation: item-bob 3.2s ease-in-out infinite;
+}
+
+@keyframes item-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* ——— Поиск в каталоге ——— */
+
+/*
+ * Поле закреплено внизу над навигационной панелью: искать и листать каталог —
+ * одно занятие, а до низа экрана дотягивается большой палец.
+ */
+.catalog-search {
+  position: sticky;
+  bottom: calc(var(--tap-target) + 22px + var(--safe-bottom));
+  z-index: 30;
+  margin-top: 16px;
+  padding: var(--bevel);
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.screen--catalog {
+  padding-bottom: 8px;
+}
+
+.item-grid--stations {
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+}
+
+.item-row__check {
+  margin-left: auto;
+  color: var(--mc-accent);
+}
+
+.settings-group--padded {
+  padding: 12px;
+  gap: 10px;
+}
+
+.settings-note {
+  margin: 0;
+  font-size: var(--text-caption1);
+  color: var(--mc-text-dim);
+  line-height: 1.45;
+}
+
+/* ——— Гайды ——— */
+
+.guide-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.guide-card {
+  width: 100%;
+  min-height: var(--tap-target);
+  display: flex;
+  /* Иконка держится верхнего края: у длинных описаний карточка иначе разъезжается. */
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  text-align: left;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  color: var(--mc-text);
+  transition: background 0.12s steps(2);
+}
+
+.guide-card:hover {
+  background: var(--mc-surface-hover);
+}
+
+.guide-card:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -2px;
+}
+
+.guide-card__text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Пометка издания уходит под описание: в строке с заголовком она его ломала. */
+.guide-card__name {
+  display: block;
+  margin-bottom: 3px;
+  font-size: var(--text-subhead);
+  color: var(--mc-text-strong);
+  line-height: 1.25;
+}
+
+.guide-card__summary {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--text-caption1);
+  color: var(--mc-text-dim);
+  line-height: 1.4;
+}
+
+.guide-back {
+  margin-bottom: 12px;
+}
+
+.edition-badge {
+  flex: none;
+  align-self: flex-start;
+  padding: 3px 7px;
+  font-size: var(--text-caption2);
+  color: var(--mc-text);
+  background: var(--mc-fill-strong);
+  border: var(--bevel-thin) solid var(--mc-surface-dark);
+}
+
+.edition-badge--wide {
+  display: inline-block;
+  margin: 8px 0 0;
+}
+
+.material-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.material-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  font-size: var(--text-caption1);
+  color: var(--mc-text);
+}
+
+.step-list,
+.note-list {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--text-footnote);
+  color: var(--mc-text);
+  line-height: 1.5;
+}
+
+.note-list {
+  list-style: square;
+}
+
+.multiblock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ——— Схемы ——— */
+
+.schematic {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.schematic__title {
+  font-size: var(--text-footnote);
+  color: var(--mc-text-strong);
+}
+
+.schematic__levels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.schematic__level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: var(--text-caption1);
+  color: var(--mc-text);
+  background: var(--mc-fill);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.schematic__level.is-active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-fill-strong);
+  color: var(--mc-accent);
+}
+
+.schematic__level:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -1px;
+}
+
+.schematic__level-number {
+  flex: none;
+  width: 20px;
+  text-align: center;
+  color: var(--mc-text-dim);
+}
+
+.schematic__grid {
+  display: grid;
+  gap: 2px;
+  justify-content: start;
+  /* Широкие схемы прокручиваются сами, страница вбок не едет. */
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.schematic__empty {
+  width: 34px;
+  height: 34px;
+  background: var(--mc-fill);
+  border: 1px dashed var(--mc-line);
+}
+
+.schematic__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: var(--text-caption2);
+  color: var(--mc-text-dim);
+}
+
+.schematic__legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/*
+ * Длинные подписи плиток не должны вылезать за рамку: «Картографический стол»
+ * не помещается в 78 px ни при каком кегле.
+ */
+.item-tile span,
+.banner-card__name {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/*
+ * Списки шагов и оговорок лежат на панели, а не прямо на текстуре фона:
+ * длинный текст поверх досок читается тяжело даже при достаточном контрасте.
+ */
+.step-list,
+.note-list {
+  padding: 12px 12px 12px 32px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.multiblock .step-list,
+.multiblock .note-list {
+  border: none;
+  background: none;
+  padding: 0 0 0 20px;
+}
+
+.step-list::marker,
+.note-list::marker {
+  color: var(--mc-text-dim);
+}
+
+/* Сводка гайда — тоже на панели. */
+.guide-summary {
+  margin: 0;
+}
+
+/* ——— Трёхмерные постройки ——— */
+
+.build3d {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+}
+
+.build3d__title {
+  font-size: var(--text-footnote);
+  color: var(--mc-text-strong);
+}
+
+.build3d__canvas {
+  width: 100%;
+  height: 260px;
+  display: block;
+  background: var(--mc-slot);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-slot-shadow) var(--mc-surface-light) var(--mc-surface-light) var(--mc-slot-shadow);
+  /* Жест вращения не должен уезжать в прокрутку страницы. */
+  touch-action: none;
+  cursor: grab;
+}
+
+.build3d__canvas:active {
+  cursor: grabbing;
+}
+
+/*
+ * Шаги — это и есть инструкция: список действий, каждое из которых
+ * переключает картинку. Поэтому они читаются сверху вниз, как текст,
+ * а не жмутся в ленту вкладок.
+ */
+.build3d__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  counter-reset: none;
+}
+
+.build3d__step {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: var(--tap-target);
+  padding: 8px 10px;
+  text-align: left;
+  font-size: var(--text-caption1);
+  line-height: 1.45;
+  color: var(--mc-text);
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  transition: background 0.12s steps(2);
+}
+
+.build3d__step:hover {
+  background: var(--mc-surface-hover);
+}
+
+.build3d__step.is-active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-surface-hover);
+  color: var(--mc-text-strong);
+}
+
+.build3d__step:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -1px;
+}
+
+.build3d__step-mark {
+  flex: none;
+  width: 1.6em;
+  height: 1.6em;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-caption2);
+  color: var(--mc-text-dim);
+  background: var(--mc-surface-dark);
+  border: var(--bevel-thin) solid var(--mc-surface-darker, var(--mc-surface-dark));
+}
+
+.build3d__step.is-active .build3d__step-mark {
+  color: var(--mc-bg);
+  background: var(--mc-accent);
+}
+
+.build3d__step-text {
+  flex: 1 1 auto;
+}
+
+.build3d__legend ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: var(--text-caption1);
+  color: var(--mc-text-dim);
+}
+
+.build3d__legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.build3d__animation {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  background: var(--mc-fill);
+  border: var(--bevel-thin) solid var(--mc-line);
+}
+
+.build3d__animation-buttons,
+.build3d__speed,
+.build3d__inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.build3d__state {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.build3d__entities {
+  margin: 0;
+  padding-inline-start: 1.2rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.build3d__animation button {
+  min-height: 36px;
+  padding: 5px 9px;
+  color: var(--mc-text);
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  font: inherit;
+}
+
+.build3d__animation button.is-active {
+  color: var(--mc-text-strong);
+  border-color: var(--mc-accent);
+}
+
+.build3d__inputs button {
+  font-size: var(--text-caption2);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.build3d__hint {
+  margin: 0;
+  font-size: var(--text-caption2);
+  color: var(--mc-text-dim);
+}
+
+/*
+ * «Уменьшение движения» гасит автоповорот и переходы, но не саму модель:
+ * здесь она содержание, а не украшение.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .build3d__step {
+    transition: none;
+  }
+}

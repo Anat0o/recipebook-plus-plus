@@ -1,0 +1,156 @@
+/*
+ * Примитивы GUI Minecraft.
+ *
+ * Всё строится на трёх цветах и прямых углах: заливка, светлая грань
+ * сверху-слева, тёмная снизу-справа. Текстур интерфейса в данных игры нет
+ * (в атласе только блоки, предметы и существа), поэтому рамки рисуются CSS —
+ * заодно они остаются чёткими при любом масштабе.
+ */
+
+.mc-font {
+  font-family: var(--font-mc);
+}
+
+/* Панель GUI: выпуклая. */
+.mc-panel {
+  background: var(--mc-surface);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  padding: 8px;
+  color: var(--mc-text);
+}
+
+/* Вдавленная поверхность: слоты, поля ввода, дорожки. */
+.mc-inset {
+  background: var(--mc-slot);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-slot-shadow) var(--mc-surface-light) var(--mc-surface-light) var(--mc-slot-shadow);
+}
+
+/* Кнопка GUI: три состояния, как в игре. */
+.mc-button {
+  min-height: var(--tap-target);
+  padding: 8px 14px;
+  background: var(--mc-surface);
+  color: var(--mc-text);
+  font-family: var(--font-mc);
+  font-size: var(--text-subhead);
+  border-style: solid;
+  border-width: var(--bevel);
+  border-color: var(--mc-surface-light) var(--mc-surface-dark) var(--mc-surface-dark) var(--mc-surface-light);
+  transition: background 0.12s steps(2);
+}
+
+.mc-button:hover {
+  background: var(--mc-surface-hover);
+  color: var(--mc-highlight);
+}
+
+/* Нажатие переворачивает грани — кнопка «уходит внутрь». */
+.mc-button:active,
+.mc-button[aria-pressed='true'],
+.mc-button.is-pressed {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-surface-hover);
+}
+
+.mc-button:focus-visible,
+.mc-slot--link:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: 1px;
+}
+
+/* Слот инвентаря. */
+.mc-slot {
+  --slot-size: 44px;
+  width: var(--slot-size);
+  height: var(--slot-size);
+  background: var(--mc-slot);
+  border-style: solid;
+  border-width: var(--bevel-thin);
+  border-color: var(--mc-slot-shadow) var(--mc-surface-light) var(--mc-surface-light) var(--mc-slot-shadow);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.mc-slot--empty {
+  opacity: 0.5;
+}
+
+/* Наведение подсвечивает слот, как курсор в инвентаре. */
+.mc-slot--link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s steps(2);
+}
+
+.mc-slot--link:hover::after,
+.mc-slot--link:focus-visible::after {
+  opacity: 0.34;
+}
+
+.mc-slot--link:hover .mc-sprite {
+  transform: scale(1.12);
+}
+
+.mc-sprite {
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  display: block;
+  transition: transform 0.14s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Количество в стопке — цифра с тенью в правом нижнем углу. */
+.mc-count {
+  position: absolute;
+  right: 1px;
+  bottom: -1px;
+  font-family: var(--font-mc);
+  font-size: 0.75rem;
+  color: #fff;
+  text-shadow: 2px 2px 0 #3f3f3f;
+  pointer-events: none;
+}
+
+.mc-arrow {
+  width: 32px;
+  height: 24px;
+  flex: none;
+  color: var(--mc-text-dim);
+}
+
+.mc-grid {
+  display: grid;
+  gap: 2px;
+}
+
+/* Тултип предмета — тёмная плашка с фиолетовой рамкой, как в игре. */
+.mc-tooltip {
+  position: absolute;
+  z-index: 80;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 6px;
+  background: var(--mc-tooltip-bg);
+  border: var(--bevel-thin) solid var(--mc-tooltip-border);
+  color: var(--mc-tooltip-text);
+  font-family: var(--font-mc);
+  font-size: var(--text-caption1);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s steps(2);
+}
+
+.mc-slot--link:hover > .mc-tooltip,
+.mc-slot--link:focus-visible > .mc-tooltip {
+  opacity: 1;
+}

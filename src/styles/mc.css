@@ -48,6 +48,11 @@
   color: var(--mc-highlight);
 }
 
+.mc-button:disabled {
+  opacity: 0.5;
+  color: var(--mc-text-dim);
+}
+
 /* Нажатие переворачивает грани — кнопка «уходит внутрь». */
 .mc-button:active,
 .mc-button[aria-pressed='true'],

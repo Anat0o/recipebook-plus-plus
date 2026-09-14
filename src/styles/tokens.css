@@ -158,6 +158,12 @@ button {
   border: none;
   padding: 0;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:disabled {
+  cursor: default;
 }
 
 /* Надписи поверх фона — с тенью, как весь текст в GUI игры. */

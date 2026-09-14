@@ -42,7 +42,7 @@ export function StationDetail({ stationId }: { stationId: string }): React.React
       {stationId === 'loom' ? <LoomStation /> : null}
       {stationId === 'smithing_table' ? <SmithingStation /> : null}
       {!['brewing_stand', 'enchanting_table', 'loom', 'smithing_table'].includes(stationId) ? <GenericStation stationId={stationId} /> : null}
-      {stationId === 'smithing_table' ? <GenericStation stationId={stationId} /> : null}
+      {stationId === 'smithing_table' ? <GenericStation stationId={stationId} collapsed /> : null}
     </div>
   )
 }
@@ -150,23 +150,28 @@ const MECHANICS: Record<string, [string, string]> = {
   beacon: ['Маяк получает уровни от пирамиды 3×3, 5×5, 7×7 и 9×9 и применяет выбранный эффект после оплаты минералом.', 'A beacon gains tiers from 3×3, 5×5, 7×7 and 9×9 pyramid layers and applies a chosen effect after mineral payment.'],
 }
 
-function GenericStation({ stationId }: { stationId: string }): React.ReactElement {
+function GenericStation({ stationId, collapsed = false }: { stationId: string; collapsed?: boolean }): React.ReactElement {
   const { version, lang, t } = useApp()
   const [sources, setSources] = useState<Source[] | null>(null)
   const [failed, setFailed] = useState(false)
+  const [expanded, setExpanded] = useState(!collapsed)
   useEffect(() => {
     let cancelled = false
-    setSources(null); setFailed(false)
+    setSources(null); setFailed(false); setExpanded(!collapsed)
     loadStations(version).then((data) => { if (!cancelled) setSources(data[stationId] ?? []) })
       .catch(() => { if (!cancelled) setFailed(true) })
     return () => { cancelled = true }
-  }, [version, stationId])
+  }, [version, stationId, collapsed])
   if (failed) return <p className="notice">{lang === 'ru' ? 'Не удалось загрузить механику станции.' : 'Could not load station mechanics.'}</p>
   if (!sources) return <p className="notice">{t.loading}</p>
   const note = MECHANICS[stationId]
   return <>
     {note ? <p className="notice">{note[lang === 'ru' ? 0 : 1]}</p> : null}
-    {sources.length ? <section className="section"><h3 className="section__title">{lang === 'ru' ? `Рецепты: ${sources.length}` : `Recipes: ${sources.length}`}</h3><div className="section__body">{sources.map((source, index) => <RecipeCard key={index} source={source} controls={{ fortune: 0, looting: 0, killedByPlayer: true }} />)}</div></section> : !note ? <p className="notice">{t.noSources}</p> : null}
+    {sources.length ? <section className="section">
+      <h3 className="section__title">{t.stationRecipes.replace('{n}', String(sources.length))}</h3>
+      {collapsed ? <button type="button" className="mc-button station-recipes-toggle" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? t.hideStationRecipes : t.showStationRecipes}</button> : null}
+      {expanded ? <div className="section__body">{sources.map((source, index) => <RecipeCard key={index} source={source} controls={{ fortune: 0, looting: 0, killedByPlayer: true }} />)}</div> : null}
+    </section> : !note ? <p className="notice">{t.noSources}</p> : null}
   </>
 }
 

@@ -114,11 +114,13 @@ export function SearchField({
   value,
   onChange,
   placeholder,
+  clearLabel,
   autoFocus,
 }: {
   value: string
   onChange: (value: string) => void
   placeholder: string
+  clearLabel: string
   autoFocus?: boolean
 }): React.ReactElement {
   return (
@@ -145,7 +147,7 @@ export function SearchField({
         onChange={(event) => onChange(event.target.value)}
       />
       {value !== '' ? (
-        <button type="button" className="search-field__clear" onClick={() => onChange('')} aria-label="Очистить">
+        <button type="button" className="search-field__clear" onClick={() => onChange('')} aria-label={clearLabel}>
           ✕
         </button>
       ) : null}

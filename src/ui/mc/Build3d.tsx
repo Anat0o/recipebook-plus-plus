@@ -348,13 +348,13 @@ export function Build3d({
             <button type="button" className="mc-button" onClick={resetAnimation}>
               {t.reset}
             </button>
-            <button type="button" className={`mc-button${cutaway ? ' is-active' : ''}`} onClick={() => setCutaway((value) => !value)}>
+            <button type="button" className={`mc-button${cutaway ? ' is-active' : ''}`} aria-pressed={cutaway} onClick={() => setCutaway((value) => !value)}>
               {t.cutaway}
             </button>
           </div>
           <div className="build3d__speed" role="group" aria-label={t.speed}>
             {[0.5, 1, 2].map((value) => (
-              <button key={value} type="button" className={speed === value ? 'is-active' : ''} onClick={() => setSpeed(value)}>
+              <button key={value} type="button" className={speed === value ? 'is-active' : ''} aria-pressed={speed === value} onClick={() => setSpeed(value)}>
                 {value}×
               </button>
             ))}

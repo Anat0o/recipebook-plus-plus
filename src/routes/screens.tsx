@@ -1,5 +1,5 @@
 /** Экраны разделов: каталог со станциями и поиском, настройки. */
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useApp } from '../app/context.tsx'
 import { itemName, LANGS, type Lang } from '../i18n/index.ts'
 import { searchItems } from '../lib/search.ts'
@@ -26,6 +26,8 @@ const STATIONS: { id: string; ru: string; en: string }[] = [
   { id: 'beacon', ru: 'Маяк', en: 'Beacon' },
 ]
 
+const PAGE_SIZE = 120
+
 /**
  * Каталог: станции, сетка предметов и поиск.
  *
@@ -41,6 +43,7 @@ export function CatalogScreen({
   const { items, t, lang, openItem, showCommandOnly } = useApp()
   const [filter, setFilter] = useState<'all' | 'blocks' | 'items'>('all')
   const [query, setQuery] = useState('')
+  const [limit, setLimit] = useState(PAGE_SIZE)
   // Список большой: откладываем пересчёт, чтобы ввод не подтормаживал.
   const deferredQuery = useDeferredValue(query)
 
@@ -60,6 +63,8 @@ export function CatalogScreen({
   }, [visible, filter, lang, deferredQuery])
 
   const searching = deferredQuery !== ''
+  useEffect(() => setLimit(PAGE_SIZE), [deferredQuery, filter, lang, showCommandOnly])
+  const rendered = shown.slice(0, limit)
 
   return (
     <div className="screen screen--catalog">
@@ -112,7 +117,7 @@ export function CatalogScreen({
 
       {searching ? (
         <ul className="item-list">
-          {shown.map((item) => (
+          {rendered.map((item) => (
             <li key={item.id}>
               <button type="button" className="item-row" onClick={() => openItem(item.id)}>
                 <ItemSprite id={item.id} size={32} />
@@ -126,7 +131,7 @@ export function CatalogScreen({
         </ul>
       ) : (
         <ul className="item-grid">
-          {shown.map((item) => (
+          {rendered.map((item) => (
             <li key={item.id}>
               <button type="button" className="item-tile" onClick={() => openItem(item.id)}>
                 <Slot id={item.id} size={44} />
@@ -137,8 +142,14 @@ export function CatalogScreen({
         </ul>
       )}
 
+      {rendered.length < shown.length ? (
+        <button type="button" className="mc-button catalog-more" onClick={() => setLimit((value) => value + PAGE_SIZE)}>
+          {t.showMore} · {shown.length - rendered.length}
+        </button>
+      ) : null}
+
       <div className="catalog-search">
-        <SearchField value={query} onChange={setQuery} placeholder={t.searchPlaceholder} />
+        <SearchField value={query} onChange={setQuery} placeholder={t.searchPlaceholder} clearLabel={t.clearSearch} />
       </div>
     </div>
   )

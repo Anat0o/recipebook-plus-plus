@@ -3,6 +3,7 @@ import { useApp } from '../app/context.tsx'
 import { itemName, villagerLevelName, villagerVariantName } from '../i18n/index.ts'
 import { loadVillagers, type VillagerCatalogData, type VillagerProfileData } from '../lib/data.ts'
 import { Arrow, Slot } from '../ui/mc/Sprite.tsx'
+import { SearchField } from '../ui/mc/controls.tsx'
 import { useAppBack } from '../lib/back-gesture.ts'
 
 export function VillagersScreen(): React.ReactElement {
@@ -44,10 +45,10 @@ export function VillagersScreen(): React.ReactElement {
   return <div className="screen screen--villagers">
     <h1 className="screen__title">{t.tabVillagers}</h1>
     <p className="screen__hint">{t.villagersHint}</p>
-    <label className="villager-search">
-      <span className="visually-hidden">{t.villagerSearch}</span>
-      <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.villagerSearchPlaceholder} />
-    </label>
+    <div className="villager-search" role="search" aria-label={t.villagerSearch}>
+      <SearchField value={query} onChange={setQuery} placeholder={t.villagerSearchPlaceholder} clearLabel={t.clearSearch} />
+    </div>
+    {profiles.length === 0 ? <p className="notice">{t.villagerSearchEmpty}</p> : null}
     <ul className="villager-grid">
       {profiles.map((profile) => <li key={profile.id}>
         <button type="button" className="villager-card" onClick={() => setSelected(profile.id)}>

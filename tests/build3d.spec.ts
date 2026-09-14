@@ -128,9 +128,14 @@ test('лента шагов остаётся нажимаемой', async ({ pag
 test('анимацию можно запускать, ускорять, сбрасывать и смотреть в разрезе', async ({ page }) => {
   const controls = page.locator('.build3d__animation').first()
   await expect(controls).toBeVisible()
+  for (const button of await controls.getByRole('button').all()) {
+    expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(43.5)
+  }
   await controls.getByRole('button', { name: '2×' }).click()
+  await expect(controls.getByRole('button', { name: '2×' })).toHaveAttribute('aria-pressed', 'true')
   await controls.getByRole('button', { name: 'Разрез' }).click()
   await expect(controls.getByRole('button', { name: 'Разрез' })).toHaveClass(/is-active/)
+  await expect(controls.getByRole('button', { name: 'Разрез' })).toHaveAttribute('aria-pressed', 'true')
 
   await controls.getByRole('button', { name: 'Пуск' }).click()
   await expect.poll(async () => (await controls.locator('.build3d__state').textContent()) ?? '').toMatch(/такт [1-9]/)

@@ -19,6 +19,7 @@ for (const scheme of ['dark', 'light']) {
     colorScheme: scheme,
     isMobile: true,
     hasTouch: true,
+    serviceWorkers: 'block',
   })
 
   await page.goto(base, { waitUntil: 'networkidle' })
@@ -52,6 +53,10 @@ for (const scheme of ['dark', 'light']) {
   await page.waitForTimeout(700)
   await page.screenshot({ path: `${out}/${scheme}-9-loom-steps.png`, fullPage: true })
 
+  await page.goto(`${base}26.2/station/smithing_table`, { waitUntil: 'networkidle' })
+  await page.waitForTimeout(700)
+  await page.screenshot({ path: `${out}/${scheme}-14-smithing.png`, fullPage: true })
+
   await page.goto(base, { waitUntil: 'networkidle' })
   await page.getByRole('button', { name: 'Автофермы', exact: true }).click()
   await page.waitForTimeout(400)
@@ -72,6 +77,11 @@ for (const scheme of ['dark', 'light']) {
   await page.getByRole('button', { name: 'Настройки', exact: true }).click()
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${out}/${scheme}-13-settings.png`, fullPage: true })
+
+  await page.goto(base, { waitUntil: 'networkidle' })
+  await page.getByRole('button', { name: 'Жители', exact: true }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${out}/${scheme}-15-villagers.png`, fullPage: true })
 
   await page.goto(base, { waitUntil: 'networkidle' })
   await page.getByRole('button', { name: 'Каталог' }).click()

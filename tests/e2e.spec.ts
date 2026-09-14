@@ -126,6 +126,9 @@ test('кузнечный стол показывает полные компле
   const dialog = page.getByRole('dialog')
   await expect(dialog).toContainText('Готовые комплекты с отделкой')
   await expect(dialog.locator('.armor-gallery:not(.armor-gallery--variants) .armor-card')).toHaveCount(18)
+  const recipes = dialog.getByRole('button', { name: 'Показать рецепты' })
+  await expect(recipes).toHaveAttribute('aria-expanded', 'false')
+  await expect(dialog.locator('.recipe')).toHaveCount(0)
   await expect(dialog.getByRole('radio', { checked: true })).toContainText('Золотая')
 
   await dialog.locator('.armor-gallery .armor-card').first().click()
@@ -135,6 +138,9 @@ test('кузнечный стол показывает полные компле
 
   await dialog.getByRole('radio', { name: /Редстоуновая/ }).click()
   await expect(dialog.getByRole('radio', { name: /Редстоуновая/ })).toHaveAttribute('aria-checked', 'true')
+  await recipes.click()
+  await expect(dialog.getByRole('button', { name: 'Скрыть рецепты' })).toHaveAttribute('aria-expanded', 'true')
+  await expect(dialog.locator('.section__body .recipe').first()).toBeVisible()
 })
 
 test('повторный тап активной вкладки возвращает её корневой экран', async ({ page }) => {
@@ -192,6 +198,13 @@ test('поиск живёт в каталоге, отдельной вкладк
   await expect(search).toBeVisible()
   await search.fill('алмаз')
   await expect(page.locator('.item-row__name').first()).toContainText(/Алмаз/)
+})
+
+test('каталог не создаёт тысячу карточек сразу и догружает их кнопкой', async ({ page }) => {
+  const grid = page.locator('.item-grid:not(.item-grid--stations)')
+  await expect(grid.locator('.item-tile')).toHaveCount(120)
+  await page.getByRole('button', { name: /Показать ещё/ }).click()
+  await expect(grid.locator('.item-tile')).toHaveCount(240)
 })
 
 test('«ломается в себя» скрыто, а условная добыча остаётся', async ({ page }) => {
@@ -272,6 +285,11 @@ test('вкладка жителей показывает все роли и ищ
   await page.getByPlaceholder('Профессия, блок или предмет').fill('Компостница')
   await expect(page.locator('.villager-card')).toHaveCount(1)
   await expect(page.locator('.villager-card')).toContainText('Фермер')
+
+  await page.getByRole('searchbox').fill('такого жителя нет')
+  await expect(page.getByText('Жители и сделки по такому запросу не найдены.')).toBeVisible()
+  await page.getByRole('button', { name: 'Очистить поиск' }).click()
+  await expect(page.locator('.villager-card')).toHaveCount(16)
 })
 
 test('карточка жителя показывает облики, уровни и открывает предмет сделки', async ({ page }) => {

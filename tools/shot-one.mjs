@@ -3,8 +3,9 @@ import { chromium } from '@playwright/test'
 const [, , path, out, scheme = 'dark'] = process.argv
 const browser = await chromium.launch()
 const page = await browser.newPage({
-  viewport: { width: 402, height: 874 }, deviceScaleFactor: 2,
+  viewport: { width: Number(process.env.WIDTH ?? 402), height: Number(process.env.HEIGHT ?? 874) }, deviceScaleFactor: 2,
   locale: 'ru-RU', colorScheme: scheme, isMobile: true, hasTouch: true,
+  serviceWorkers: 'block',
 })
 const errors = []
 page.on('pageerror', (e) => errors.push(String(e)))

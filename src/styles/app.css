@@ -87,6 +87,11 @@
   color: var(--mc-accent);
 }
 
+.tab-bar__item:active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-surface-hover);
+}
+
 .tab-bar__item:focus-visible {
   outline: var(--bevel-thin) solid var(--mc-accent-bright);
   outline-offset: -1px;
@@ -110,16 +115,7 @@
 
 /* ——— Жители и торговля ——— */
 
-.villager-search input {
-  width: 100%;
-  min-height: var(--tap-target);
-  box-sizing: border-box;
-  padding: 8px 10px;
-  color: #fff;
-  background: var(--mc-field);
-  border: var(--bevel-thin) solid var(--mc-surface-dark);
-  font: inherit;
-}
+.villager-search { margin-bottom: 12px; }
 
 .villager-grid {
   list-style: none;
@@ -150,6 +146,24 @@
 .villager-card strong,
 .villager-card small { display: block; }
 .villager-card small { margin-top: 3px; color: var(--mc-text-dim); font-size: var(--text-caption2); }
+
+.villager-card:hover,
+.villager-workstation:hover,
+.villager-card:active,
+.villager-workstation:active {
+  background: var(--mc-surface-hover);
+}
+
+.villager-card:active,
+.villager-workstation:active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+}
+
+.villager-card:focus-visible,
+.villager-workstation:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -2px;
+}
 
 .villager-variants { display: flex; flex-wrap: wrap; gap: 5px; }
 .villager-variants span { padding: 5px 7px; background: var(--mc-fill-strong); color: var(--mc-text); }
@@ -223,6 +237,12 @@
   color: var(--mc-highlight);
 }
 
+.search-field__clear:focus-visible,
+.sheet__close:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: 1px;
+}
+
 /* ——— Списки ——— */
 
 .item-list {
@@ -254,6 +274,12 @@
 .item-row:hover {
   background: var(--mc-fill-strong);
   color: var(--mc-highlight);
+}
+
+.item-row:active,
+.item-tile:active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-surface-hover);
 }
 
 .item-row:focus-visible {
@@ -454,6 +480,10 @@
   color: var(--mc-accent);
 }
 
+.segmented__item:active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+}
+
 .segmented__item:focus-visible {
   outline: var(--bevel-thin) solid var(--mc-accent-bright);
   outline-offset: -1px;
@@ -593,6 +623,7 @@
   font-weight: 400;
   color: var(--mc-text-strong);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .item-head__id {
@@ -946,6 +977,13 @@
   background: var(--mc-surface-hover);
 }
 
+.banner-card:active,
+.armor-card:active,
+.trim-material:active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-surface-hover);
+}
+
 .banner-card:focus-visible {
   outline: var(--bevel-thin) solid var(--mc-accent-bright);
   outline-offset: -1px;
@@ -1042,6 +1080,10 @@
 .trim-material.is-selected {
   background: var(--mc-surface-hover);
   border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+}
+
+.trim-material:hover {
+  background: var(--mc-surface-hover);
 }
 
 .trim-material:focus-visible {
@@ -1258,7 +1300,21 @@
 }
 
 .item-grid--stations {
-  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+}
+
+.item-grid--stations .item-tile {
+  min-height: 104px;
+}
+
+.catalog-more {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.station-recipes-toggle {
+  width: 100%;
+  margin-bottom: 8px;
 }
 
 .item-row__check {
@@ -1307,6 +1363,13 @@
 }
 
 .guide-card:hover {
+  background: var(--mc-surface-hover);
+}
+
+.guide-card:active,
+.schematic__level:active,
+.build3d__step:active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
   background: var(--mc-surface-hover);
 }
 
@@ -1429,7 +1492,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 32px;
+  min-height: var(--tap-target);
   padding: 4px 8px;
   font-size: var(--text-caption1);
   color: var(--mc-text);
@@ -1627,7 +1690,7 @@
 }
 
 .build3d__step.is-active .build3d__step-mark {
-  color: var(--mc-bg);
+  color: var(--mc-text-on-dark);
   background: var(--mc-accent);
 }
 
@@ -1670,19 +1733,19 @@
 
 .build3d__state {
   margin: 0;
-  color: var(--muted);
+  color: var(--mc-text-dim);
   font-size: 0.82rem;
 }
 
 .build3d__entities {
   margin: 0;
   padding-inline-start: 1.2rem;
-  color: var(--muted);
+  color: var(--mc-text-dim);
   font-size: 0.78rem;
 }
 
 .build3d__animation button {
-  min-height: 36px;
+  min-height: var(--tap-target);
   padding: 5px 9px;
   color: var(--mc-text);
   background: var(--mc-surface);
@@ -1693,8 +1756,19 @@
 }
 
 .build3d__animation button.is-active {
-  color: var(--mc-text-strong);
-  border-color: var(--mc-accent);
+  color: var(--mc-accent);
+  background: var(--mc-fill-strong);
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+}
+
+.build3d__animation button:active {
+  border-color: var(--mc-surface-dark) var(--mc-surface-light) var(--mc-surface-light) var(--mc-surface-dark);
+  background: var(--mc-surface-hover);
+}
+
+.build3d__animation button:focus-visible {
+  outline: var(--bevel-thin) solid var(--mc-accent-bright);
+  outline-offset: -1px;
 }
 
 .build3d__inputs button {

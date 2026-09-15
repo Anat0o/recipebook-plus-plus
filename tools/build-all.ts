@@ -2,8 +2,9 @@
  * Сборка всех статических данных сайта.
  * Запуск: npm run build:data [-- версия …]
  */
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { createHash } from 'node:crypto'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { join, relative, sep } from 'node:path'
 import type { Source } from '../src/lib/schema.ts'
 import { VERSIONS, DEFAULT_VERSION } from './config.ts'
 import { fetchAll, sourceDir } from './fetch-mcmeta.ts'
@@ -26,7 +27,14 @@ import { TagIndex } from './mc/tags.ts'
 import { SPECIAL_SOURCES } from './curated/special-sources.ts'
 import { BLOCKS_WITHOUT_ITEM } from './curated/block-models.ts'
 
-const OUT_ROOT = 'public/data'
+const FINAL_OUT_ROOT = 'public/data'
+mkdirSync('public', { recursive: true })
+const OUT_ROOT = mkdtempSync('public/.data-build-')
+// Исключение на любом этапе оставляет предыдущий опубликованный набор целым,
+// а незавершённый staging удаляется при завершении процесса.
+process.on('exit', () => {
+  if (existsSync(OUT_ROOT)) rmSync(OUT_ROOT, { recursive: true, force: true })
+})
 const STATIONS = [
   'crafting_table', 'furnace', 'blast_furnace', 'smoker', 'campfire', 'stonecutter',
   'smithing_table', 'brewing_stand', 'enchanting_table', 'anvil', 'grindstone', 'loom',
@@ -102,6 +110,7 @@ if (targets.length === 0) {
 fetchAll(targets.map((v) => v.id))
 
 const reports: CoverageReport[] = []
+const publishedVersions: { id: string; label: string; revision: string }[] = []
 
 for (const version of targets) {
   const started = Date.now()
@@ -244,6 +253,9 @@ for (const version of targets) {
     }),
   )
 
+  const revision = writeOfflineManifest(outDir)
+  publishedVersions.push({ id: version.id, label: version.label, revision })
+
   reports.push({
     version: version.id,
     items: items.length,
@@ -265,10 +277,56 @@ for (const version of targets) {
 
 writeFileSync(
   join(OUT_ROOT, 'versions.json'),
-  JSON.stringify({ default: DEFAULT_VERSION, versions: VERSIONS.map(({ id, label }) => ({ id, label })) }),
+  JSON.stringify({
+    default: targets.some((version) => version.id === DEFAULT_VERSION) ? DEFAULT_VERSION : targets[0]!.id,
+    versions: publishedVersions,
+  }),
 )
 writeFileSync(join(OUT_ROOT, 'coverage.json'), JSON.stringify(reports, null, 2))
-console.log('\nversions.json и coverage.json записаны.')
+publishData()
+console.log('\nversions.json и coverage.json записаны, набор данных опубликован атомарно.')
+
+function publishData(): void {
+  const backup = `public/.data-backup-${process.pid}`
+  if (existsSync(backup)) rmSync(backup, { recursive: true, force: true })
+  if (existsSync(FINAL_OUT_ROOT)) renameSync(FINAL_OUT_ROOT, backup)
+  try {
+    renameSync(OUT_ROOT, FINAL_OUT_ROOT)
+    rmSync(backup, { recursive: true, force: true })
+  } catch (error) {
+    if (existsSync(backup) && !existsSync(FINAL_OUT_ROOT)) renameSync(backup, FINAL_OUT_ROOT)
+    throw error
+  }
+}
+
+/**
+ * Манифест — единственный источник списка обязательных файлов офлайн-пакета.
+ * Ревизия зависит от содержимого, поэтому обновление гайдов внутри той же
+ * версии Minecraft получает новый cache key и не смешивается со старым набором.
+ */
+function writeOfflineManifest(outDir: string): string {
+  const files: { path: string; size: number; sha256: string }[] = []
+  const walk = (directory: string): void => {
+    for (const name of readdirSync(directory).sort()) {
+      const absolute = join(directory, name)
+      const stat = statSync(absolute)
+      if (stat.isDirectory()) {
+        walk(absolute)
+        continue
+      }
+      const contents = readFileSync(absolute)
+      files.push({
+        path: relative(outDir, absolute).split(sep).join('/'),
+        size: contents.byteLength,
+        sha256: createHash('sha256').update(contents).digest('hex'),
+      })
+    }
+  }
+  walk(outDir)
+  const revision = createHash('sha256').update(JSON.stringify(files)).digest('hex').slice(0, 16)
+  writeFileSync(join(outDir, 'offline.json'), JSON.stringify({ revision, files }))
+  return revision
+}
 
 function stationOf(source: Source): string | null {
   if (source.kind === 'craft' || source.kind === 'transmute') return 'crafting_table'

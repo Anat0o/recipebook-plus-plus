@@ -89,11 +89,18 @@ async function ensureJar(version: string): Promise<{ jar: string; hash: string }
 
 /** Папка assets/minecraft с извлечёнными официальными текстурами брони. */
 export async function officialArmorAssets(version: string): Promise<string> {
-  const { jar, hash } = await ensureJar(version)
   const root = join(CACHE, version, 'armor-assets')
   const stamp = join(root, '.source-sha1')
+  const assets = join(root, 'assets', 'minecraft')
+
+  // Уже извлечённый набор самодостаточен: его source SHA-1 записан при
+  // проверенной загрузке. Повторная сборка не должна зависеть от доступности
+  // Mojang metadata, если исходные пиксели на месте.
+  if (existsSync(stamp) && existsSync(assets)) return assets
+
+  const { jar, hash } = await ensureJar(version)
   if (existsSync(stamp) && readFileSync(stamp, 'utf8').trim() === hash) {
-    return join(root, 'assets', 'minecraft')
+    return assets
   }
 
   rmSync(root, { recursive: true, force: true })
@@ -108,5 +115,5 @@ export async function officialArmorAssets(version: string): Promise<string> {
     '-d', root,
   ], { stdio: 'ignore' })
   writeFileSync(stamp, `${hash}\n`)
-  return join(root, 'assets', 'minecraft')
+  return assets
 }

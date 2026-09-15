@@ -35,6 +35,7 @@ test('загруженная версия открывается без сети
   expect(cachedPaths.some((path) => path.endsWith('/blocks.png'))).toBe(true)
   expect(cachedPaths.some((path) => path.endsWith('/armor-trims.json'))).toBe(true)
   expect(cachedPaths.some((path) => path.endsWith('/armor-sets.png'))).toBe(true)
+  expect(cachedPaths.some((path) => path.endsWith('/offline.json'))).toBe(true)
 
   // Рвём сеть и открываем адрес, которого браузер ещё не открывал.
   await context.setOffline(true)

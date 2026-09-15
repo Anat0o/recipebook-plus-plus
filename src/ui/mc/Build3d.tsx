@@ -152,6 +152,7 @@ export function Build3d({
       if (event.type === 'press') sim.press(`${event.x},${event.y},${event.z}`)
       if (event.type === 'block') sim.setBlock(event.x, event.y, event.z, event.block, event.facing, event.variant)
       if (event.type === 'container') sim.setContainerSignal(event.x, event.y, event.z, event.signal)
+      if (event.type === 'insert') sim.insertItem(event.x, event.y, event.z, event.item, event.count)
       if (event.type === 'move') {
         const entity = entityRef.current.find((entry) => entry.id === event.entity)
         if (entity) Object.assign(entity, { x: event.x, y: event.y, z: event.z })
@@ -382,6 +383,16 @@ export function Build3d({
             <ul className="build3d__entities" aria-label={t.schematicEntities}>
               {entityRef.current.filter((entity) => entity.visible !== false).map((entity) => (
                 <li key={entity.id}>{entity.type}: {entity.x.toFixed(1)}, {entity.y.toFixed(1)}, {entity.z.toFixed(1)}</li>
+              ))}
+            </ul>
+          ) : null}
+          {simRef.current?.inventoryState().length ? (
+            <ul className="build3d__entities" aria-label={t.containerContents}>
+              {simRef.current.inventoryState().map((container) => (
+                <li key={`${container.x},${container.y},${container.z}`}>
+                  {itemName(byId.get(container.block)?.names, lang, container.block)} {container.x},{container.y},{container.z}: {' '}
+                  {container.stacks.map((stack) => `${itemName(byId.get(stack.id)?.names, lang, stack.id)} ×${stack.count}`).join(', ')}
+                </li>
               ))}
             </ul>
           ) : null}

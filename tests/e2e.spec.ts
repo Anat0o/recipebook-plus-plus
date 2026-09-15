@@ -100,6 +100,22 @@ test('станции открываются прямо из каталога', a
   await expect(page).toHaveURL(/station\/brewing_stand$/)
 })
 
+test('маяк показывает четыре полные 3D-пирамиды', async ({ page }) => {
+  await page.goto('./26.2/station/beacon')
+  const dialog = page.getByRole('dialog')
+  const tiers = dialog.locator('.beacon-pyramids__tiers')
+  await expect(dialog.getByRole('heading', { name: 'Пирамиды маяка' })).toBeVisible()
+  await expect(tiers.getByRole('tab')).toHaveCount(4)
+  await expect(tiers.getByRole('tab', { name: /Уровень 1/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(dialog.locator('.build3d__canvas')).toBeVisible()
+  await expect(dialog.locator('.build3d__legend')).toContainText('9')
+
+  await tiers.getByRole('tab', { name: /Уровень 4/ }).click()
+  await expect(tiers.getByRole('tab', { name: /Уровень 4/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(dialog.locator('.build3d__title')).toContainText('164 блоков')
+  await expect(dialog.locator('.build3d__legend')).toContainText('164')
+})
+
 test('ткацкий станок: галерея баннеров и последовательность слоёв', async ({ page }) => {
   await page.goto('./26.2/station/loom')
   const dialog = page.getByRole('dialog')

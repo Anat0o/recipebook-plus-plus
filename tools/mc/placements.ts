@@ -28,6 +28,7 @@ export function toPlacements(layers: Layer[]): Placement[] {
           ...(parsed.variant ? { variant: parsed.variant } : {}),
           ...(parsed.active !== undefined ? { active: parsed.active } : {}),
           ...(parsed.shell ? { shell: true } : {}),
+          ...(parsed.inventory ? { inventory: parsed.inventory.map((stack) => ({ ...stack })) } : {}),
           step: parsed.step ?? y + 1,
         })
       })

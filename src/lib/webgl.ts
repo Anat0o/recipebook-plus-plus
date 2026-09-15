@@ -48,6 +48,8 @@ export interface Placement {
   variant?: string
   /** В режиме разреза оболочка становится полупрозрачной. */
   shell?: boolean
+  /** Начальное содержимое нужно симулятору; рендер геометрии его игнорирует. */
+  inventory?: { id: string; count: number; key?: string }[]
   step: number
 }
 

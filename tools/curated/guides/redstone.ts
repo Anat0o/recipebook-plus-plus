@@ -209,6 +209,7 @@ export const REDSTONE_GUIDES: Guide[] = [
     ru: 'Воронковый таймер',
     en: 'Hopper Timer',
     icon: 'hopper',
+    buildMode: 'alternatives',
     editions: ['java', 'bedrock'],
     ruSummary:
       'Воронка сливает стопку в сундук, компаратор гаснет, когда она опустела. Так отмеряют минуты, а не тики.',
@@ -253,9 +254,8 @@ export const REDSTONE_GUIDES: Guide[] = [
             ],
           },
         ],
-        animation: { duration: 32, events: [
-          { tick: 1, type: 'container', x: 3, y: 1, z: 0, signal: 15 },
-          { tick: 28, type: 'container', x: 3, y: 1, z: 0, signal: 0 },
+        animation: { duration: 40, events: [
+          { tick: 1, type: 'insert', x: 3, y: 1, z: 0, item: 'cobblestone', count: 8 },
         ] },
       },
       {
@@ -289,11 +289,13 @@ export const REDSTONE_GUIDES: Guide[] = [
     ],
     ruNotes: [
       'Воронка отдаёт 2,5 предмета в секунду. Стопка в 64 — это 25 секунд, пять полных стопок — больше двух минут.',
+      'В короткой анимации используются восемь булыжников; сигнал компаратора и опустошение воронки рассчитываются из их реального количества.',
       'Компаратор сзади читает не «есть или нет», а насколько воронка полна: сигнал падает по мере опустошения.',
       'Первая схема — одноразовый отсчёт; вторая полностью показывает повторяющийся таймер с взаимной блокировкой.',
     ],
     enNotes: [
       'A hopper moves 2.5 items per second. A stack of 64 is 25 seconds; five full stacks are over two minutes.',
+      'The short animation uses eight cobblestone items; comparator output and hopper drain are calculated from their actual count.',
       'The comparator behind it reads not “empty or not” but how full the hopper is: the signal falls as it drains.',
       'This is a one-shot timer. Making it repeat means locking the hoppers against each other, which is a notably bigger circuit — that is what a hopper clock is.',
     ],
@@ -440,6 +442,7 @@ export const REDSTONE_GUIDES: Guide[] = [
     ru: 'Логические вентили',
     en: 'Logic Gates',
     icon: 'redstone_torch',
+    buildMode: 'alternatives',
     editions: ['java', 'bedrock'],
     ruSummary:
       'НЕ, ИЛИ, И и вычитание на компараторе — четыре кирпича, из которых собрано всё остальное.',
@@ -777,7 +780,16 @@ export const REDSTONE_GUIDES: Guide[] = [
           ] },
           { grid: [
             [_, _, _, 'stone@3', _],
-            [_, _, _, 'hopper^north@3', _],
+            [_, _, _, {
+              block: 'hopper', facing: 'north', step: 3,
+              inventory: [
+                { id: 'iron_ingot', count: 41 },
+                { id: 'stick', count: 1, key: 'renamed_filter_filler' },
+                { id: 'stick', count: 1, key: 'renamed_filter_filler' },
+                { id: 'stick', count: 1, key: 'renamed_filter_filler' },
+                { id: 'stick', count: 1, key: 'renamed_filter_filler' },
+              ],
+            }, _],
             [_, _, _, 'comparator^south@5', _],
             [_, _, _, 'redstone@5', _],
           ] },
@@ -786,10 +798,10 @@ export const REDSTONE_GUIDES: Guide[] = [
             [_, _, _, 'hopper^east@4', 'hopper^east@4'],
           ] },
         ],
-        animation: { duration: 30, events: [
-          { tick: 4, type: 'container', x: 3, y: 2, z: 1, signal: 2 },
-          { tick: 12, type: 'container', x: 3, y: 2, z: 1, signal: 3 },
-          { tick: 22, type: 'container', x: 3, y: 2, z: 1, signal: 2 },
+        animation: { duration: 48, events: [
+          { tick: 4, type: 'insert', x: 3, y: 3, z: 1, item: 'iron_ingot', count: 1 },
+          { tick: 20, type: 'insert', x: 3, y: 3, z: 1, item: 'iron_ingot', count: 1 },
+          { tick: 36, type: 'insert', x: 3, y: 3, z: 1, item: 'cobblestone', count: 1 },
         ] },
       },
     ],

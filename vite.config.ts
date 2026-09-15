@@ -91,7 +91,12 @@ function pwa(): Plugin {
       ]
 
       const template = readFileSync(resolve('tools/sw-template.js'), 'utf8')
-      const buildVersion = createHash('sha256').update(JSON.stringify(precache)).digest('hex').slice(0, 12)
+      const buildVersion = createHash('sha256')
+        .update(template)
+        .update(JSON.stringify(manifest))
+        .update(JSON.stringify(precache))
+        .digest('hex')
+        .slice(0, 12)
       this.emitFile({
         type: 'asset',
         fileName: 'sw.js',

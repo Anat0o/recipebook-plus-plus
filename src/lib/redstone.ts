@@ -16,8 +16,8 @@
  *  - **Факел** горит, пока не запитан блок, к которому он прикреплён,
  *    и переключается с задержкой в такт.
  *
- * Всё, чего в схемах нет (вагонетки, наблюдение за ростом растений, перенос
- * предметов воронками), намеренно не моделируется.
+ * Воронки моделируются дискретными инвентарями и честной блокировкой. Физика
+ * воды, вагонетки и биологический рост остаются внешней средой сценария.
  */
 
 export interface SimBlock {
@@ -31,6 +31,7 @@ export interface SimBlock {
   step: number
   /** Готовый цвет пыли по силе сигнала: подставляется вместо тонировки модели. */
   tint?: number
+  inventory?: { id: string; count: number; key?: string }[]
 }
 
 type Cell = string
@@ -60,11 +61,16 @@ const NON_SOLID = new Set([
 /** Что включается сигналом: показываем это состояние отдельной моделью. */
 const MECHANISMS = new Set([
   'piston', 'sticky_piston', 'redstone_lamp', 'copper_bulb', 'iron_door', 'oak_door',
-  'oak_trapdoor', 'iron_trapdoor', 'dispenser', 'dropper', 'hopper', 'note_block',
+  'oak_trapdoor', 'iron_trapdoor', 'dispenser', 'dropper', 'note_block',
   'crafter', 'tnt', 'observer',
 ])
 
 const PISTONS = new Set(['piston', 'sticky_piston'])
+/** Неподвижные в Java блоки, встречающиеся в опубликованных схемах. */
+const PISTON_IMMOVABLE = new Set([
+  'piston', 'sticky_piston', 'hopper', 'chest', 'furnace', 'blast_furnace', 'smoker',
+  'dispenser', 'dropper', 'crafter', 'spawner',
+])
 const BUTTONS = new Set(['stone_button', 'oak_button'])
 const PLATES = new Set(['stone_pressure_plate', 'oak_pressure_plate'])
 
@@ -78,6 +84,9 @@ export const INPUTS = new Set([
 const BUTTON_TICKS = 10
 /** Импульс наблюдателя. */
 const OBSERVER_TICKS = 1
+/** Воронка переносит один предмет каждые 8 игровых, то есть 4 редстоуновых тика. */
+const HOPPER_TICKS = 4
+const STACK_SIZE = 64
 
 const key = (x: number, y: number, z: number): Cell => `${x},${y},${z}`
 const cellOf = (b: { x: number; y: number; z: number }): Cell => key(b.x, b.y, b.z)
@@ -112,6 +121,9 @@ export class Redstone {
   /** Смещение реально вытолкнутых блоков относительно исходной схемы. */
   private pistonShift = new Map<Cell, [number, number, number]>()
   private container = new Map<Cell, number>()
+  private inventory = new Map<Cell, { id: string; count: number; key?: string }[]>()
+  private hopperClock = 0
+  private stabilizing = false
   private outputEvents: { cell: Cell; block: string; active: boolean }[] = []
   private lastActive = new Map<Cell, boolean>()
 
@@ -127,11 +139,15 @@ export class Redstone {
     this.comparator.clear(); this.observer.clear(); this.watched.clear(); this.bulb.clear()
     this.lever.clear(); this.button.clear(); this.detector.clear(); this.dust.clear(); this.piston.clear()
     this.pistonShift.clear()
-    this.container.clear(); this.bulbEdge.clear(); this.lastActive.clear(); this.outputEvents = []
+    this.container.clear(); this.inventory.clear(); this.hopperClock = 0
+    this.bulbEdge.clear(); this.lastActive.clear(); this.outputEvents = []
     for (const source of this.initial) {
       const placement = { ...source }
       this.order.push(placement)
       this.at.set(cellOf(placement), placement)
+      if (placement.inventory?.length) {
+        this.inventory.set(cellOf(placement), placement.inventory.map((stack) => ({ ...stack })))
+      }
     }
     for (const placement of this.order) {
       const cell = cellOf(placement)
@@ -151,7 +167,9 @@ export class Redstone {
         break
       }
     }
+    this.stabilizing = true
     this.stabilize()
+    this.stabilizing = false
   }
 
   /** Внешнее изменение мира: рост растения или появление/исчезновение плода. */
@@ -163,6 +181,8 @@ export class Redstone {
       this.pistonShift.delete(cellOf(old))
     }
     this.at.delete(cell)
+    this.inventory.delete(cell)
+    this.container.delete(cell)
     if (!block) return
     const next: SimBlock = {
       x, y, z, block, step: old?.step ?? 1,
@@ -177,6 +197,34 @@ export class Redstone {
     this.container.set(key(x, y, z), Math.max(0, Math.min(15, Math.round(signal))))
   }
 
+  /** Внешний предмет попадает в показанный контейнер; дальше его двигает симулятор. */
+  insertItem(x: number, y: number, z: number, item: string, count = 1): number {
+    return this.addToInventory(key(x, y, z), item, count)
+  }
+
+  inventoryCountAt(x: number, y: number, z: number, item?: string): number {
+    return (this.inventory.get(key(x, y, z)) ?? [])
+      .filter((stack) => !item || stack.id === item)
+      .reduce((sum, stack) => sum + stack.count, 0)
+  }
+
+  inventoryState(): { x: number; y: number; z: number; block: string; stacks: { id: string; count: number }[] }[] {
+    const state: { x: number; y: number; z: number; block: string; stacks: { id: string; count: number }[] }[] = []
+    for (const [cell, stacks] of this.inventory) {
+      if (stacks.length === 0) continue
+      const placement = this.at.get(cell)
+      if (!placement) continue
+      state.push({
+        x: placement.x,
+        y: placement.y,
+        z: placement.z,
+        block: placement.block,
+        stacks: stacks.map(({ id, count }) => ({ id, count })),
+      })
+    }
+    return state.sort((a, b) => a.y - b.y || a.z - b.z || a.x - b.x)
+  }
+
   drainEvents(): { cell: Cell; block: string; active: boolean }[] {
     const events = this.outputEvents
     this.outputEvents = []
@@ -184,7 +232,10 @@ export class Redstone {
   }
 
   snapshot(): string {
-    return JSON.stringify(this.frame().map(({ x, y, z, block, facing, variant, tint }) => [x,y,z,block,facing,variant,tint]))
+    return JSON.stringify([
+      this.frame().map(({ x, y, z, block, facing, variant, tint }) => [x,y,z,block,facing,variant,tint]),
+      [...this.inventory].sort(([a], [b]) => a.localeCompare(b)),
+    ])
   }
 
   /** Клетки, по которым можно щёлкнуть: рычаг, кнопка, плита, датчик дня. */
@@ -292,6 +343,59 @@ export class Redstone {
         }
       }
     }
+
+    if (!this.stabilizing) {
+      this.hopperClock += 1
+      if (this.hopperClock >= HOPPER_TICKS) {
+        this.hopperClock = 0
+        this.tickHoppers()
+      }
+    }
+  }
+
+  /** Один дискретный перенос: сначала выдача вперёд, затем забор сверху. */
+  private tickHoppers(): void {
+    for (const hopper of this.order.filter((placement) => placement.block === 'hopper')) {
+      if (this.activated(hopper)) continue
+      const cell = cellOf(hopper)
+      const target = step(cell, hopper.facing ?? 'down')
+      if (this.moveOne(cell, target)) continue
+      this.moveOne(step(cell, 'up'), cell)
+    }
+  }
+
+  private moveOne(from: Cell, to: Cell): boolean {
+    const target = this.at.get(to)
+    if (!target || (target.block !== 'hopper' && target.block !== 'chest')) return false
+    const source = this.inventory.get(from)
+    const stack = source?.find((entry) => entry.count > 0)
+    if (!stack || this.addToInventory(to, stack.id, 1, stack.key) !== 0) return false
+    stack.count -= 1
+    if (stack.count === 0) source!.splice(source!.indexOf(stack), 1)
+    return true
+  }
+
+  /** Возвращает число предметов, которые не поместились. */
+  private addToInventory(cell: Cell, item: string, count: number, stackKey = item): number {
+    const placement = this.at.get(cell)
+    if (!placement || (placement.block !== 'hopper' && placement.block !== 'chest')) return count
+    const slots = placement.block === 'hopper' ? 5 : 27
+    const inventory = this.inventory.get(cell) ?? []
+    this.inventory.set(cell, inventory)
+    let left = Math.max(0, Math.floor(count))
+    for (const stack of inventory) {
+      if ((stack.key ?? stack.id) !== stackKey || stack.count >= STACK_SIZE) continue
+      const moved = Math.min(left, STACK_SIZE - stack.count)
+      stack.count += moved
+      left -= moved
+      if (left === 0) return 0
+    }
+    while (left > 0 && inventory.length < slots) {
+      const moved = Math.min(left, STACK_SIZE)
+      inventory.push({ id: item, count: moved, ...(stackKey !== item ? { key: stackKey } : {}) })
+      left -= moved
+    }
+    return left
   }
 
   private readonly bulbEdge = new Map<Cell, boolean>()
@@ -329,7 +433,7 @@ export class Redstone {
     while (true) {
       const block = world.get(cursor)
       if (!block) break
-      if (MECHANISMS.has(block.block) || line.length >= 12) return false
+      if (PISTON_IMMOVABLE.has(block.block) || line.length >= 12) return false
       line.push(block)
       cursor = step(cursor, facing)
     }
@@ -344,7 +448,7 @@ export class Redstone {
     const world = this.movedWorld()
     const destination = this.front(piston)
     const pulled = world.get(step(destination, facing))
-    if (!pulled || MECHANISMS.has(pulled.block) || world.has(destination)) return
+    if (!pulled || PISTON_IMMOVABLE.has(pulled.block) || world.has(destination)) return
     this.shiftBlock(pulled, -dx, -dy, -dz)
   }
 
@@ -589,7 +693,7 @@ export class Redstone {
       this.sourceFor(behind, cellOf(placement)),
       this.strong(behind),
     )
-    back = Math.max(back, this.container.get(behind) ?? 0)
+    back = Math.max(back, this.container.get(behind) ?? 0, this.inventorySignal(behind))
     // Компаратор читает содержимое: у медной лампы это её состояние.
     if (container?.block === 'copper_bulb') back = this.bulb.get(behind) ? 15 : 0
 
@@ -619,7 +723,19 @@ export class Redstone {
 
   /** Точный уровень, назначенный сценарием контейнеру. */
   containerSignalAt(x: number, y: number, z: number): number {
-    return this.container.get(key(x, y, z)) ?? 0
+    const cell = key(x, y, z)
+    return Math.max(this.container.get(cell) ?? 0, this.inventorySignal(cell))
+  }
+
+  private inventorySignal(cell: Cell): number {
+    const placement = this.at.get(cell)
+    const slots = placement?.block === 'hopper' ? 5 : placement?.block === 'chest' ? 27 : 0
+    if (slots === 0) return 0
+    const used = (this.inventory.get(cell) ?? []).reduce(
+      (sum, stack) => sum + Math.min(STACK_SIZE, stack.count) / STACK_SIZE,
+      0,
+    )
+    return used > 0 ? Math.floor(1 + (14 * used) / slots) : 0
   }
 
   private support(placement: SimBlock): Cell {

@@ -6,7 +6,7 @@
  * два шага — значит стереть из каталога 94 честно добываемых блока.
  */
 import { describe, expect, it } from 'vitest'
-import { buildGuides, ALL_GUIDES } from './build-guides.ts'
+import { buildGuides, guideMaterials, placedMaterials, ALL_GUIDES } from './build-guides.ts'
 import { buildMultiblocks } from './build-multiblocks.ts'
 import { MULTIBLOCKS } from './curated/multiblocks.ts'
 import { buildItems } from './build-items.ts'
@@ -19,6 +19,7 @@ import { DEFAULT_VERSION } from './config.ts'
 import type { Source } from '../src/lib/schema.ts'
 import { BLOCKS_WITHOUT_ITEM } from './curated/block-models.ts'
 import { Redstone } from '../src/lib/redstone.ts'
+import { toPlacements } from './mc/placements.ts'
 
 const DATA_ROOT = `${sourceDir(DEFAULT_VERSION, 'data-json')}/data/minecraft`
 const itemTags = new TagIndex(DATA_ROOT, 'item')
@@ -203,7 +204,30 @@ describe('гайды', () => {
       const known = new Set(ids)
       for (const event of build.animation?.events ?? []) {
         if (event.type === 'move' || event.type === 'show') expect(known.has(event.entity), `${guide.id}: ${event.entity}`).toBe(true)
+        if (event.type === 'insert') {
+          expect(knownItems.has(event.item), `${guide.id}: unknown inserted item ${event.item}`).toBe(true)
+          const target = build.placements.find((entry) => entry.x === event.x && entry.y === event.y && entry.z === event.z)
+          expect(['hopper', 'chest'], `${guide.id}: insertion target`).toContain(target?.block)
+        }
       }
+      for (const placement of build.placements.filter((entry) => entry.inventory)) {
+        expect(['hopper', 'chest'], `${guide.id}: inventory on ${placement.block}`).toContain(placement.block)
+        expect(placement.inventory!.length, `${guide.id}: too many slots`).toBeLessThanOrEqual(placement.block === 'hopper' ? 5 : 27)
+        for (const stack of placement.inventory!) {
+          expect(knownItems.has(stack.id), `${guide.id}: unknown inventory item ${stack.id}`).toBe(true)
+          expect(stack.count, `${guide.id}: invalid stack`).toBeGreaterThan(0)
+          expect(stack.count, `${guide.id}: overstacked item`).toBeLessThanOrEqual(64)
+        }
+      }
+    }
+  })
+
+  it('фильтр и одноразовый таймер не подменяют инвентарь готовым сигналом', () => {
+    const filter = data.find((guide) => guide.id === 'item_filter')!.builds[0]!
+    const timer = data.find((guide) => guide.id === 'hopper_timer')!.builds[0]!
+    for (const build of [filter, timer]) {
+      expect(build.animation!.events.some((event) => event.type === 'insert')).toBe(true)
+      expect(build.animation!.events.some((event) => event.type === 'container')).toBe(false)
     }
   })
 
@@ -220,7 +244,7 @@ describe('гайды', () => {
   it('каждый блок схемы обеспечен соответствующим материалом', () => {
     const materialFor: Record<string, string> = {
       water: 'water_bucket', lava: 'lava_bucket', melon_stem: 'melon_seeds',
-      wheat: 'wheat_seeds',
+      wheat: 'wheat_seeds', farmland: 'dirt', bubble_column: 'water_bucket',
     }
     for (const guide of data) {
       const materials = new Set(guide.materials.map((entry) => entry.id))
@@ -231,6 +255,43 @@ describe('гайды', () => {
         ).toBe(true)
       }
     }
+  })
+
+  it('количество строительных материалов считается по координатам схемы', () => {
+    for (const source of ALL_GUIDES) {
+      const published = data.find((guide) => guide.id === source.id)!
+      expect(published.materials, source.id).toEqual(guideMaterials(source))
+
+      const expected = new Map(published.materials.map((entry) => [entry.id, entry.count]))
+      const builds = source.schematics.map((schematic) => placedMaterials(toPlacements(schematic.layers)))
+      for (const id of new Set(builds.flatMap((build) => [...build.keys()]))) {
+        const counts = builds.map((build) => build.get(id) ?? 0)
+        const needed = source.buildMode === 'alternatives'
+          ? Math.max(...counts)
+          : counts.reduce((sum, count) => sum + count, 0)
+        expect(expected.get(id), `${source.id}: wrong count for ${id}`).toBe(needed)
+      }
+    }
+  })
+
+  it('не предлагает недобываемую грядку как материал', () => {
+    const wheat = data.find((guide) => guide.id === 'wheat')!
+    expect(wheat.materials.some((entry) => entry.id === 'farmland')).toBe(false)
+    expect(wheat.materials).toContainEqual({ id: 'dirt', count: 23 })
+    expect(wheat.materials).toContainEqual({ id: 'wooden_hoe', count: 1 })
+    expect(data.find((guide) => guide.id === 'sugar_cane')!.materials.some((entry) => entry.id === 'wooden_hoe')).toBe(false)
+  })
+
+  it('исправляет известные заниженные списки крупных схем', () => {
+    const materials = (id: string): Map<string, number> => new Map(
+      data.find((guide) => guide.id === id)!.materials.map((entry) => [entry.id, entry.count]),
+    )
+    expect(materials('iron').get('glass')).toBe(125)
+    expect(materials('creeper').get('oak_trapdoor')).toBe(81)
+    expect(materials('item_filter').get('hopper')).toBe(4)
+    expect(materials('item_filter').get('iron_ingot')).toBe(41)
+    expect(materials('item_filter').get('stick')).toBe(4)
+    expect(materials('spawner').get('cobblestone')).toBeGreaterThan(358)
   })
 
   it('каждая ферма доводит предмет до показанного целевого контейнера', () => {

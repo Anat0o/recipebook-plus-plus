@@ -3,7 +3,7 @@
  * зачарований. Обе механики живут в коде игры, поэтому здесь честно сказано,
  * что именно взято из данных, а что описано вручную.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   loadArmorTrims, loadBanners, loadBrewing, loadEnchantments, loadStations,
   type ArmorTrimData, type BannerData, type BannerDesign, type BrewingData, type EnchantmentEntry,
@@ -17,6 +17,8 @@ import { romanize } from '../ui/mc/controls.tsx'
 import { RecipeCard } from '../ui/mc/Recipes.tsx'
 import type { Source } from '../lib/schema.ts'
 import { useAppBack } from '../lib/back-gesture.ts'
+import { BEACON_TIERS, beaconMineralCount, beaconPyramid, type BeaconTier } from '../lib/beacon.ts'
+import { Build3d } from '../ui/mc/Build3d.tsx'
 
 export const STATION_PAGES = new Set([
   'crafting_table', 'furnace', 'blast_furnace', 'smoker', 'campfire', 'stonecutter',
@@ -41,9 +43,64 @@ export function StationDetail({ stationId }: { stationId: string }): React.React
       {stationId === 'enchanting_table' ? <EnchantingStation /> : null}
       {stationId === 'loom' ? <LoomStation /> : null}
       {stationId === 'smithing_table' ? <SmithingStation /> : null}
-      {!['brewing_stand', 'enchanting_table', 'loom', 'smithing_table'].includes(stationId) ? <GenericStation stationId={stationId} /> : null}
+      {stationId === 'beacon' ? <BeaconStation /> : null}
+      {!['brewing_stand', 'enchanting_table', 'loom', 'smithing_table', 'beacon'].includes(stationId) ? <GenericStation stationId={stationId} /> : null}
       {stationId === 'smithing_table' ? <GenericStation stationId={stationId} collapsed /> : null}
     </div>
+  )
+}
+
+function BeaconStation(): React.ReactElement {
+  const { t } = useApp()
+  const [tier, setTier] = useState<BeaconTier>(1)
+  const placements = useMemo(() => beaconPyramid(tier), [tier])
+  const steps = useMemo(() => [
+    ...Array.from({ length: tier }, (_, layer) => {
+      const size = 2 * (tier - layer) + 1
+      return {
+        ru: `Выложите сплошной слой ${size}×${size} из подходящих минеральных блоков.`,
+        en: `Lay a solid ${size}×${size} layer of valid mineral blocks.`,
+      }
+    }),
+    {
+      ru: 'Поставьте маяк по центру верхнего слоя. Над ним должно оставаться открытое небо.',
+      en: 'Place the beacon in the centre of the top layer. Keep its path to the sky clear.',
+    },
+  ], [tier])
+  const base = tier * 2 + 1
+
+  return (
+    <>
+      <p className="notice">{t.beaconPyramidsHint}</p>
+      <section className="section beacon-pyramids">
+        <h3 className="section__title">{t.beaconPyramids}</h3>
+        <div className="beacon-pyramids__tiers" role="tablist" aria-label={t.beaconPyramids}>
+          {BEACON_TIERS.map((value) => {
+            const size = value * 2 + 1
+            return (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tier === value}
+                className={tier === value ? 'is-selected' : ''}
+                onClick={() => setTier(value)}
+                key={value}
+              >
+                <strong>{t.beaconTier} {value}</strong>
+                <span>{size}×{size}</span>
+                <span>{beaconMineralCount(value)} {t.beaconBlocks}</span>
+              </button>
+            )
+          })}
+        </div>
+        <Build3d
+          placements={placements}
+          steps={steps}
+          title={`${t.beaconTier} ${tier} · ${t.beaconBase} ${base}×${base} · ${beaconMineralCount(tier)} ${t.beaconBlocks}`}
+        />
+        <p className="screen__hint">{t.beaconValidBlocks}</p>
+      </section>
+    </>
   )
 }
 

@@ -70,9 +70,10 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // The shell and version list are small mutable resources. Prefer the
-  // network so an installed app notices releases, while retaining fallback.
-  const mutable = url.pathname === SCOPE.pathname || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/data/versions.json')
+  // Оболочка и данные с фиксированными именами изменяемы. Сеть имеет
+  // приоритет, иначе загруженный офлайн-пакет старой ревизии навсегда
+  // перекрывал бы свежие guides.json/villagers.json той же версии Minecraft.
+  const mutable = url.pathname === SCOPE.pathname || url.pathname.endsWith('/index.html') || url.pathname.includes('/data/')
   if (mutable) {
     event.respondWith(
       fetch(request).then((response) => {

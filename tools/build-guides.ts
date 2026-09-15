@@ -33,6 +33,70 @@ export interface GuideData {
   notes: Record<string, string[]>
 }
 
+/** Блоки мира, которые не расходуют одноимённый предмет при строительстве. */
+const MATERIAL_ALIAS: Record<string, string | null> = {
+  water: null,
+  lava: null,
+  bubble_column: null,
+  spawner: null,
+  farmland: 'dirt',
+  wheat: 'wheat_seeds',
+  melon_stem: 'melon_seeds',
+}
+
+/**
+ * Точный предметный состав одной схемы.
+ *
+ * Дверь и кровать занимают две клетки мира, но ставятся одним предметом.
+ * Жидкости, существующий спаунер и пузырьковая колонна учитываются отдельными
+ * требованиями исходного гайда, а не числом клеток на разрезе.
+ */
+export function placedMaterials(placements: Placement[]): Map<string, number> {
+  const blocks = new Map<string, number>()
+  for (const placement of placements) {
+    const item = Object.hasOwn(MATERIAL_ALIAS, placement.block)
+      ? MATERIAL_ALIAS[placement.block]
+      : placement.block
+    if (!item) continue
+    blocks.set(item, (blocks.get(item) ?? 0) + 1)
+    for (const stack of placement.inventory ?? []) {
+      blocks.set(stack.id, (blocks.get(stack.id) ?? 0) + stack.count)
+    }
+  }
+
+  for (const [id, count] of [...blocks]) {
+    if (id.endsWith('_door') || id.endsWith('_bed')) blocks.set(id, Math.ceil(count / 2))
+  }
+  return blocks
+}
+
+/** Материалы, достаточные для всей постройки или любого одного её варианта. */
+export function guideMaterials(guide: Guide): { id: string; count: number }[] {
+  const placements = guide.schematics.map((schematic) => toPlacements(schematic.layers))
+  const builds = placements.map(placedMaterials)
+  const exact = new Map<string, number>()
+  for (const build of builds) {
+    for (const [id, count] of build) {
+      const previous = exact.get(id) ?? 0
+      exact.set(id, guide.buildMode === 'alternatives' ? Math.max(previous, count) : previous + count)
+    }
+  }
+
+  // То, чего нет клеткой в готовой постройке: вёдра, временные факелы,
+  // вагонетка, ножницы, бутылки и другие расходники подготовки.
+  for (const declared of guide.materials) {
+    if (declared.id === 'farmland' || exact.has(declared.id)) continue
+    exact.set(declared.id, declared.count)
+  }
+
+  // Грядки создаются из земли инструментом; сам блок farmland получить нельзя.
+  if (placements.some((build) => build.some((placement) => placement.block === 'farmland'))) {
+    exact.set('wooden_hoe', Math.max(1, exact.get('wooden_hoe') ?? 0))
+  }
+
+  return [...exact].map(([id, count]) => ({ id, count }))
+}
+
 export function buildGuides(knownItems: Set<string>): {
   data: GuideData[]
   problems: string[]
@@ -70,7 +134,7 @@ export function buildGuides(knownItems: Set<string>): {
       summaries: { ru: guide.ruSummary, en: guide.enSummary },
       icon: guide.icon,
       editions: guide.editions,
-      materials: guide.materials,
+      materials: guideMaterials(guide),
       builds: guide.schematics.map((schematic) => {
         const placements = toPlacements(schematic.layers)
         const animation = schematic.animation ?? (guide.category === 'redstone' ? inputCycle(placements) : undefined)

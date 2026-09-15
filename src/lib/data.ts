@@ -11,6 +11,7 @@ export type SceneEvent =
   | { tick: number; type: 'press'; x: number; y: number; z: number }
   | { tick: number; type: 'block'; x: number; y: number; z: number; block?: string; facing?: string; variant?: string }
   | { tick: number; type: 'container'; x: number; y: number; z: number; signal: number }
+  | { tick: number; type: 'insert'; x: number; y: number; z: number; item: string; count: number }
   | { tick: number; type: 'move'; entity: string; x: number; y: number; z: number }
   | { tick: number; type: 'show'; entity: string; visible: boolean }
 
@@ -30,7 +31,12 @@ export interface SpriteSheet {
 
 export interface VersionList {
   default: string
-  versions: { id: string; label: string }[]
+  versions: { id: string; label: string; revision?: string }[]
+}
+
+export interface OfflineManifest {
+  revision: string
+  files: { path: string; size: number; sha256: string }[]
 }
 
 export type NameMap = Record<string, Record<string, string>>
@@ -66,6 +72,10 @@ function fetchJson<T>(path: string): Promise<T> {
 
 export function loadVersionList(): Promise<VersionList> {
   return fetchJson<VersionList>('versions.json')
+}
+
+export function loadOfflineManifest(version: string): Promise<OfflineManifest> {
+  return fetchJson<OfflineManifest>(`${version}/offline.json`)
 }
 
 export async function loadVersion(version: string): Promise<VersionData> {
@@ -271,36 +281,13 @@ export async function loadBlocks(version: string): Promise<BlockData & { url: st
   return { ...data, url: `${BASE}/${version}/${data.file}` }
 }
 
-/** Все файлы версии — список для оффлайн-загрузки. */
-export function versionFiles(
-  version: string,
-  meta: { shards: number; tiles: { light: string; dark: string; flame: string } },
-  spriteFile: string,
-): string[] {
+/** Все файлы версии из созданного сборкой манифеста. */
+export function versionFiles(version: string, manifest: OfflineManifest): string[] {
   const base = `${BASE}/${version}`
   return [
     // Без списка версий приложение не стартует вовсе — он идёт первым.
     `${BASE}/versions.json`,
-    `${base}/meta.json`,
-    `${base}/items.json`,
-    `${base}/entities.json`,
-    `${base}/brewing.json`,
-    `${base}/enchantments.json`,
-    `${base}/banners.json`,
-    `${base}/armor-trims.json`,
-    `${base}/multiblocks.json`,
-    `${base}/guides.json`,
-    `${base}/villagers.json`,
-    `${base}/stations.json`,
-    `${base}/blocks.json`,
-    `${base}/blocks.png`,
-    `${base}/sprites.json`,
-    `${base}/${spriteFile}`,
-    `${base}/banner-masks.png`,
-    `${base}/armor-sets.png`,
-    `${base}/${meta.tiles.light}`,
-    `${base}/${meta.tiles.dark}`,
-    `${base}/${meta.tiles.flame}`,
-    ...Array.from({ length: meta.shards }, (_, i) => `${base}/item/${i}.json`),
+    `${base}/offline.json`,
+    ...manifest.files.map((file) => `${base}/${file.path}`),
   ]
 }

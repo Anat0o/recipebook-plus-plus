@@ -33,6 +33,8 @@ export interface CellSpec {
   active?: boolean
   /** Оболочка скрывается в режиме разреза, но остаётся в материалах. */
   shell?: boolean
+  /** Начальное содержимое контейнера; порядок соответствует слотам игры. */
+  inventory?: { id: string; count: number; key?: string }[]
 }
 
 export type Cell = string | CellSpec
@@ -97,6 +99,7 @@ export type SceneEvent =
   | { tick: number; type: 'press'; x: number; y: number; z: number }
   | { tick: number; type: 'block'; x: number; y: number; z: number; block?: string; facing?: string; variant?: string }
   | { tick: number; type: 'container'; x: number; y: number; z: number; signal: number }
+  | { tick: number; type: 'insert'; x: number; y: number; z: number; item: string; count: number }
   | { tick: number; type: 'move'; entity: string; x: number; y: number; z: number }
   | { tick: number; type: 'show'; entity: string; visible: boolean }
 
@@ -120,6 +123,7 @@ export interface Placement {
    */
   variant?: string
   shell?: boolean
+  inventory?: { id: string; count: number; key?: string }[]
   /** Номер шага сборки, начиная с единицы. */
   step: number
 }
@@ -142,6 +146,12 @@ export interface Guide {
   enSummary: string
   /** Что понадобится: идентификатор и количество. */
   materials: { id: string; count: number }[]
+  /**
+   * Несколько схем либо являются частями одной постройки, либо независимыми
+   * вариантами. От этого зависит итоговый список материалов: части складываем,
+   * для вариантов берём максимум, достаточный для любого одного варианта.
+   */
+  buildMode?: 'parts' | 'alternatives'
   schematics: Schematic[]
   /** Оговорки: что ломается, чего не хватает, чем отличается на Bedrock. */
   ruNotes: string[]

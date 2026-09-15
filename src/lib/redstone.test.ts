@@ -51,6 +51,31 @@ describe('redstone simulator', () => {
     expect(sim.signalAt(2, 0, 0)).toBe(7)
   })
 
+  it('moves real items through an unpowered hopper and updates comparator fullness', () => {
+    const sim = new Redstone([
+      { ...block(0, 'hopper', 'east'), inventory: [{ id: 'iron_ingot', count: 2 }] },
+      block(1, 'chest'),
+      block(-1, 'comparator', 'west'),
+    ])
+    expect(sim.containerSignalAt(0, 0, 0)).toBe(1)
+    for (let tick = 0; tick < 8; tick += 1) sim.tick()
+    expect(sim.inventoryCountAt(0, 0, 0, 'iron_ingot')).toBe(0)
+    expect(sim.inventoryCountAt(1, 0, 0, 'iron_ingot')).toBe(2)
+    expect(sim.containerSignalAt(0, 0, 0)).toBe(0)
+  })
+
+  it('a powered hopper is locked', () => {
+    const sim = new Redstone([
+      block(0, 'lever'),
+      { ...block(1, 'hopper', 'east'), inventory: [{ id: 'iron_ingot', count: 1 }] },
+      block(2, 'chest'),
+    ])
+    sim.press('0,0,0')
+    for (let tick = 0; tick < 12; tick += 1) sim.tick()
+    expect(sim.inventoryCountAt(1, 0, 0, 'iron_ingot')).toBe(1)
+    expect(sim.inventoryCountAt(2, 0, 0, 'iron_ingot')).toBe(0)
+  })
+
   it('observer emits only after an external block change', () => {
     const sim = new Redstone([
       block(0, 'observer', 'east'),
@@ -90,6 +115,19 @@ describe('redstone simulator', () => {
     sim.press('0,0,0'); sim.tick()
     expect(doorBlockAt(3)).toBe(true)
     expect(doorBlockAt(2)).toBe(false)
+  })
+
+  it('does not move Java container block entities with a piston', () => {
+    for (const container of ['hopper', 'chest', 'furnace']) {
+      const sim = new Redstone([
+        block(0, 'lever'),
+        block(1, 'piston', 'east'),
+        block(2, container),
+      ])
+      sim.press('0,0,0'); sim.tick()
+      expect(sim.signalAt(1, 0, 0), container).toBe(0)
+      expect(sim.frame().some((entry) => entry.block === container && entry.x === 2), container).toBe(true)
+    }
   })
 })
 
@@ -225,5 +263,35 @@ describe('published redstone guides', () => {
     sim.setContainerSignal(3, 2, 1, 3); settle(sim, 8)
     expect(sim.signalAt(1, 1, 2)).toBe(15)
     expect(sim.signalAt(2, 1, 1)).toBe(0)
+  })
+
+  it('routes matching items into the filter and lets a foreign item bypass it', () => {
+    const guide = REDSTONE_GUIDES.find((entry) => entry.id === 'item_filter')!.schematics[0]!
+    const sim = new Redstone(toPlacements(guide.layers))
+    for (let tick = 1; tick <= guide.animation!.duration; tick += 1) {
+      for (const event of guide.animation!.events.filter((entry) => entry.tick === tick)) {
+        if (event.type === 'insert') sim.insertItem(event.x, event.y, event.z, event.item, event.count)
+      }
+      sim.tick()
+    }
+
+    expect(sim.inventoryCountAt(4, 1, 1, 'iron_ingot')).toBe(1)
+    expect(sim.inventoryCountAt(4, 3, 1, 'cobblestone')).toBe(1)
+    expect(sim.inventoryCountAt(3, 2, 1, 'iron_ingot')).toBe(41)
+  })
+
+  it('drains the one-shot hopper timer from actual items instead of scripted signal levels', () => {
+    const guide = REDSTONE_GUIDES.find((entry) => entry.id === 'hopper_timer')!.schematics[0]!
+    const sim = new Redstone(toPlacements(guide.layers))
+    for (let tick = 1; tick <= guide.animation!.duration; tick += 1) {
+      for (const event of guide.animation!.events.filter((entry) => entry.tick === tick)) {
+        if (event.type === 'insert') sim.insertItem(event.x, event.y, event.z, event.item, event.count)
+      }
+      sim.tick()
+    }
+    expect(sim.inventoryCountAt(3, 1, 0)).toBe(0)
+    expect(sim.inventoryCountAt(4, 1, 0, 'cobblestone')).toBe(8)
+    expect(sim.containerSignalAt(3, 1, 0)).toBe(0)
+    expect(sim.signalAt(0, 1, 0)).toBe(0)
   })
 })

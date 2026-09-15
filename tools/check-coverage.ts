@@ -43,6 +43,30 @@ const TRADE_ONLY = new Set(['enchanted_book', 'globe_banner_pattern'])
 
 const reports: Report[] = JSON.parse(readFileSync(REPORT, 'utf8'))
 const problems: string[] = []
+const versionList: { default: string; versions: { id: string; revision?: string }[] } = JSON.parse(
+  readFileSync('public/data/versions.json', 'utf8'),
+)
+
+const requiredVersionFiles = [
+  'meta.json', 'items.json', 'sprites.json', 'guides.json', 'villagers.json',
+  'stations.json', 'blocks.json', 'blocks.png', 'armor-trims.json', 'armor-sets.png',
+  'offline.json',
+]
+for (const version of versionList.versions) {
+  for (const file of requiredVersionFiles) {
+    if (!existsSync(`public/data/${version.id}/${file}`)) problems.push(`[${version.id}] отсутствует обязательный файл ${file}`)
+  }
+  if (typeof version.revision !== 'string' || version.revision.length === 0) {
+    problems.push(`[${version.id}] в versions.json отсутствует ревизия офлайн-пакета`)
+  }
+}
+if (!versionList.versions.some((version) => version.id === versionList.default)) {
+  problems.push(`версия по умолчанию ${versionList.default} не опубликована`)
+}
+if (new Set(reports.map((report) => report.version)).size !== versionList.versions.length ||
+    versionList.versions.some((version) => !reports.some((report) => report.version === version.id))) {
+  problems.push('coverage.json не совпадает со списком опубликованных версий')
+}
 
 for (const report of reports) {
   const label = `[${report.version}]`

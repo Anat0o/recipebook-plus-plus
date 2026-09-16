@@ -16,7 +16,8 @@ export interface VersionConfig {
 }
 
 export const VERSIONS: VersionConfig[] = [
-  { id: '26.2', label: '26.2 «Chaos Cubed»', latest: true, dataDrivenTrades: true },
+  { id: '26.3', label: '26.3', latest: true, dataDrivenTrades: true },
+  { id: '26.2', label: '26.2 «Chaos Cubed»', dataDrivenTrades: true },
   { id: '26.1.2', label: '26.1.2 «Tiny Takeover»', dataDrivenTrades: true },
   { id: '1.21.11', label: '1.21.11', dataDrivenTrades: false },
 ]
